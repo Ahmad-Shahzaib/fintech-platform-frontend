@@ -2,13 +2,13 @@
 
 import { useSidebar } from "@/context/SidebarContext";
 import AppHeader from "@/layout/AppHeader";
-import AppSidebar from "@/layout/AppSidebar";
 import Backdrop from "@/layout/Backdrop";
+import UserSidebar from "@/layout/UserSidebar";
 import React from "react";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { UserRole } from "@/types/auth";
 
-export default function AdminLayout({
+export default function UserLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -23,10 +23,10 @@ export default function AdminLayout({
     : "lg:ml-[90px]";
 
   return (
-    <ProtectedRoute allowedRoles={[UserRole.ADMIN]}>
+    <ProtectedRoute allowedRoles={[UserRole.USER]}>
       <div className="min-h-screen xl:flex">
         {/* Sidebar and Backdrop */}
-        <AppSidebar />
+        <UserSidebar />
         <Backdrop />
         {/* Main Content Area */}
         <div
