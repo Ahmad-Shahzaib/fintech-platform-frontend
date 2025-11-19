@@ -1,4 +1,5 @@
 "use client";
+import { useRouter } from 'next/navigation';
 import { useState, useRef, useEffect } from 'react';
 
 type DocumentFiles = {
@@ -28,7 +29,7 @@ export default function MultiStepForm() {
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  
+  const router = useRouter();
   const [formData, setFormData] = useState<FormDataType>({
     // Personal Information
     fullName: '',
@@ -118,7 +119,7 @@ export default function MultiStepForm() {
     setTimeout(() => {
       setFormData(prev => ({
         ...prev,
-        verificationStatus: 'approved'
+        verificationStatus: 'Pending Review'
       }));
       setCurrentStep(5);
     }, 2000);
@@ -222,12 +223,7 @@ export default function MultiStepForm() {
               <span className="ml-2 text-xs font-medium text-gray-400 bg-gray-100 px-2 py-1 rounded">KYC</span>
             </div>
           </div>
-          <div className="flex space-x-3">
-            <button className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 transition-colors">
-              Back to Main Demo
-            </button>
-           
-          </div>
+         
         </div>
 
         {/* Progress Bar */}
@@ -889,15 +885,12 @@ export default function MultiStepForm() {
                 </div>
                 
                 <div className="mt-8 flex flex-col sm:flex-row justify-center gap-4">
-                  <button 
-                    onClick={() => setCurrentStep(1)}
-                    className="px-6 py-3 bg-gray-100 text-gray-600 text-sm font-medium rounded-xl hover:bg-gray-200 transition-colors"
-                  >
-                    Start New Verification
-                  </button>
+                 
                   {formData.verificationStatus === 'approved' && (
-                    <button className="px-6 py-3 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 transition-colors">
-                      Continue to Dashboard
+                    <button
+                    onClick={() => router.push('/signin')}
+                    className="px-6 py-3 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 transition-colors">
+                      Continue to Login Page 
                     </button>
                   )}
                 </div>
