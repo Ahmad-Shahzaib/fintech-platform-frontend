@@ -1,6 +1,7 @@
 "use client";
 
 import { useSidebar } from "@/context/SidebarContext";
+import { CalenderIcon, GridIcon } from "@/icons";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import React from "react";
@@ -12,37 +13,15 @@ export default function UserSidebar() {
 
   const userMenuItems = [
     {
+      icon: <GridIcon />,
       name: "Dashboard",
       path: "/dashboard",
-      icon: (
-        <svg
-          className="fill-current"
-          width="20"
-          height="20"
-          viewBox="0 0 20 20"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path d="M9.99998 1.04163C5.02498 1.04163 1.04163 5.02498 1.04163 9.99998C1.04163 14.975 5.02498 18.9583 9.99998 18.9583C14.975 18.9583 18.9583 14.975 18.9583 9.99998C18.9583 5.02498 14.975 1.04163 9.99998 1.04163ZM9.99998 17.2916C5.89581 17.2916 2.70831 14.1041 2.70831 9.99998C2.70831 5.89581 5.89581 2.70831 9.99998 2.70831C14.1041 2.70831 17.2916 5.89581 17.2916 9.99998C17.2916 14.1041 14.1041 17.2916 9.99998 17.2916Z" />
-          <path d="M10.8333 9.99998V5.83331H9.16665V11.6666H14.1666V9.99998H10.8333Z" />
-        </svg>
-      ),
+
     },
     {
-      name: "Profile",
-      path: "/profile",
-      icon: (
-        <svg
-          className="fill-current"
-          width="20"
-          height="20"
-          viewBox="0 0 20 20"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path d="M10 0C4.47715 0 0 4.47715 0 10C0 15.5228 4.47715 20 10 20C15.5228 20 20 15.5228 20 10C20 4.47715 15.5228 0 10 0ZM10 5C11.3807 5 12.5 6.11929 12.5 7.5C12.5 8.88071 11.3807 10 10 10C8.61929 10 7.5 8.88071 7.5 7.5C7.5 6.11929 8.61929 5 10 5ZM10 17C7.5 17 5.29 15.7925 4 13.9C4.025 11.975 8 10.9 10 10.9C11.995 10.9 15.975 11.975 16 13.9C14.71 15.7925 12.5 17 10 17Z" />
-        </svg>
-      ),
+      icon: <CalenderIcon />,
+      name: "Top Up Request",
+      path: "/top-up",
     },
     {
       name: "Settings",
@@ -66,11 +45,9 @@ export default function UserSidebar() {
 
   return (
     <aside
-      className={`fixed inset-y-0 left-0 z-50 flex-col justify-between bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 transition-all duration-300 ease-in-out ${
-        isMobileOpen ? "translate-x-0" : "-translate-x-full"
-      } lg:translate-x-0 ${
-        isExpanded || isHovered ? "w-[290px]" : "w-[90px]"
-      } hidden lg:flex`}
+      className={`fixed inset-y-0 left-0 z-50 flex-col justify-between bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 transition-all duration-300 ease-in-out ${isMobileOpen ? "translate-x-0" : "-translate-x-full"
+        } lg:translate-x-0 ${isExpanded || isHovered ? "w-[290px]" : "w-[90px]"
+        } hidden lg:flex`}
       onMouseEnter={() => !isExpanded && setIsHovered(true)}
       onMouseLeave={() => !isExpanded && setIsHovered(false)}
     >
@@ -96,11 +73,10 @@ export default function UserSidebar() {
               <li key={item.path}>
                 <Link
                   href={item.path}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                    isActive(item.path)
-                      ? "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
-                      : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
-                  }`}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive(item.path)
+                    ? "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
+                    : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                    }`}
                 >
                   <span className="flex-shrink-0">{item.icon}</span>
                   {(isExpanded || isHovered) && (
@@ -119,9 +95,8 @@ export default function UserSidebar() {
             className="flex items-center justify-center w-full p-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
           >
             <svg
-              className={`w-5 h-5 transition-transform ${
-                isExpanded ? "rotate-180" : ""
-              }`}
+              className={`w-5 h-5 transition-transform ${isExpanded ? "rotate-180" : ""
+                }`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
