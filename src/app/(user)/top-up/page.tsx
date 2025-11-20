@@ -3,7 +3,7 @@ import TopUpRequest from "@/components/top-up/TopUpRequest";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import { Metadata } from "next";
 import React from "react";
-import TopUpsDashboard from "@/components/top-up/TopUpsDashboard ";
+import TopUpsDashboard from "@/components/top-up/TopUpsDashboard";
 
 
 export const metadata: Metadata = {
@@ -15,10 +15,7 @@ export const metadata: Metadata = {
 export default function page() {
   return (
     <div>
-      <PageBreadcrumb pageTitle="TopUp" />
-      {/* <Calendar /> */}
       <TopUpRequest />
-      <TopUpsDashboard />
     </div>
   );
 }

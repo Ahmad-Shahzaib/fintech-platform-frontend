@@ -1,10 +1,12 @@
 "use client";
 
 import { useSidebar } from "@/context/SidebarContext";
-import { CalenderIcon, GridIcon } from "@/icons";
+import { CalenderIcon, GridIcon, PageIcon } from "@/icons";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import path from "path";
 import React from "react";
+import Image from "next/image";
 
 export default function UserSidebar() {
   const { isExpanded, toggleSidebar, isHovered, setIsHovered, isMobileOpen, toggleMobileSidebar } =
@@ -22,6 +24,29 @@ export default function UserSidebar() {
       icon: <CalenderIcon />,
       name: "Top Up Request",
       path: "/top-up",
+    },
+    {
+      icon: <CalenderIcon />,
+      name: "My Top Ups",
+      path: "/my-top-up",
+    },
+    {
+      name: "RePayments",
+      path: "/repayments",
+      icon: <PageIcon />,
+      subItems: [
+        { name: "Make Payment", path: "/make-payment", pro: false },
+        { name: "Payment History", path: "/payment-history", pro: false },
+      ],
+    },
+    {
+      name: "Help & Support",
+      path: "/help-support",
+      icon: <PageIcon />,
+      subItems: [
+        { name: "FAQ", path: "/faq", pro: false },
+        { name: "Contact Support", path: "/contact-us", pro: false },
+      ],
     },
     {
       name: "Settings",
@@ -53,16 +78,17 @@ export default function UserSidebar() {
     >
       <div className="flex flex-col flex-1 overflow-hidden">
         {/* Logo */}
-        <div className="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-800">
+        <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-800">
           <Link href="/dashboard" className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-lg">U</span>
+            <div className="rounded-lg flex items-center justify-center">
+             <Image
+                width={130}
+                height={130}
+                src="/images/logo/auth-logo.png"
+                alt="Logo"
+              />
             </div>
-            {(isExpanded || isHovered) && (
-              <span className="text-lg font-semibold text-gray-800 dark:text-white whitespace-nowrap">
-                User Portal
-              </span>
-            )}
+            
           </Link>
         </div>
 
