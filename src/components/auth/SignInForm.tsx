@@ -24,7 +24,7 @@ export default function SignInForm() {
 
     try {
       const result = await login({ email, password });
-      
+
       if (!result.success) {
         setError(result.error || "Login failed");
       }
@@ -39,13 +39,7 @@ export default function SignInForm() {
   return (
     <div className="flex flex-col flex-1 lg:w-1/2 w-full">
       <div className="w-full max-w-md sm:pt-10 mx-auto mb-5">
-        <Link
-          href="/"
-          className="inline-flex items-center text-sm text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-        >
-          <ChevronLeftIcon />
-          Back to dashboard
-        </Link>
+
       </div>
       <div className="flex flex-col justify-center flex-1 w-full max-w-md mx-auto">
         <div>
@@ -126,9 +120,9 @@ export default function SignInForm() {
                   <Label>
                     Email <span className="text-error-500">*</span>{" "}
                   </Label>
-                  <Input 
-                    placeholder="info@gmail.com" 
-                    type="email" 
+                  <Input
+                    placeholder="info@gmail.com"
+                    type="email"
                     defaultValue={email}
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={isLoading}
@@ -173,9 +167,9 @@ export default function SignInForm() {
                   </Link>
                 </div>
                 <div>
-                  <Button 
-                    className="w-full" 
-                    size="sm" 
+                  <Button
+                    className="w-full"
+                    size="sm"
                     disabled={isLoading}
                   >
                     {isLoading ? "Signing in..." : "Sign in"}

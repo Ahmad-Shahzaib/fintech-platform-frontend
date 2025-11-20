@@ -27,12 +27,12 @@ export default function AuthLayout({
                     <Image
                       width={231}
                       height={48}
-                      src="/images/logo/auth-logo.svg"
+                      src="/images/logo/auth-logo12.png"
                       alt="Logo"
                     />
                   </Link>
                   <p className="text-center text-gray-400 dark:text-white/60">
-                    Free and Open-Source Tailwind CSS Admin Dashboard Template
+                    Leading the way in innovative fintech solutions for a smarter financial future
                   </p>
                 </div>
               </div>

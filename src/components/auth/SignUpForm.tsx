@@ -23,7 +23,7 @@ export default function SignUpForm() {
     password_confirmation: '',
     phone: '',
   });
-  
+
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
   const { isLoading, error } = useSelector((state: RootState) => state.auth);
@@ -31,21 +31,21 @@ export default function SignUpForm() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    
+
     // Clear error when user starts typing
     if (error) dispatch(clearError());
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!isChecked) {
       alert('Please accept the terms and conditions');
       return;
     }
-    
+
     const result = await dispatch(registerUser(formData));
-    
+
     if (!result.error) {
       router.push('/dashboard'); // Redirect on success
     }
@@ -54,13 +54,7 @@ export default function SignUpForm() {
   return (
     <div className="flex flex-col flex-1 lg:w-1/2 w-full overflow-y-auto no-scrollbar">
       <div className="w-full max-w-md sm:pt-10 mx-auto mb-5">
-        <Link
-          href="/"
-          className="inline-flex items-center text-sm text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-        >
-          <ChevronLeftIcon />
-          Back to dashboard
-        </Link>
+
       </div>
       <div className="flex flex-col justify-center flex-1 w-full max-w-md mx-auto">
         <div>
@@ -72,13 +66,13 @@ export default function SignUpForm() {
               Enter your email and password to sign up!
             </p>
           </div>
-          
+
           {error && (
             <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
               {error}
             </div>
           )}
-          
+
           <div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-5">
               <button className="inline-flex items-center justify-center gap-3 py-3 text-sm font-normal text-gray-700 transition-colors bg-gray-100 rounded-lg px-7 hover:bg-gray-200 hover:text-gray-800 dark:bg-white/5 dark:text-white/90 dark:hover:bg-white/10">

@@ -9,9 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertCircle } from "lucide-react"
 
 interface AddUserModalDetailProps {
-    isOpen: boolean
-    onClose: () => voida
-    onAddUser: (user: any) => void
+    isOpen: boolean;
+    onClose: () => void;
+    onAddUser: (user: any) => void;
 }
 
 export function AddUserModalDetail({ isOpen, onClose, onAddUser }: AddUserModalDetailProps) {

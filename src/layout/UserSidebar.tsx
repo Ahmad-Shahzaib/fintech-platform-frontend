@@ -1,51 +1,60 @@
 "use client";
 
 import { useSidebar } from "@/context/SidebarContext";
-import { CalenderIcon, GridIcon, PageIcon } from "@/icons";
-import Link from "next/link";
+import { MdDashboard } from "react-icons/md";
+import { RiMoneyDollarCircleLine } from "react-icons/ri";
+import { BsCreditCard } from "react-icons/bs";
+import { BiSupport } from "react-icons/bi"; import Link from "next/link";
 import { usePathname } from "next/navigation";
-import path from "path";
-import React from "react";
+import React, { useState } from "react";
 import Image from "next/image";
+import { IoIosArrowDown } from "react-icons/io";
 
 export default function UserSidebar() {
   const { isExpanded, toggleSidebar, isHovered, setIsHovered, isMobileOpen, toggleMobileSidebar } =
     useSidebar();
   const pathname = usePathname();
 
+  // submenu open state
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
+
+  const toggleSubMenu = (name: string) => {
+    setOpenMenu((prev) => (prev === name ? null : name));
+  };
+
+
   const userMenuItems = [
     {
-      icon: <GridIcon />,
+      icon: <MdDashboard size={25} />,
       name: "Dashboard",
       path: "/dashboard",
-
     },
     {
-      icon: <CalenderIcon />,
+      icon: <RiMoneyDollarCircleLine size={25} />,
       name: "Top Up Request",
       path: "/top-up",
     },
     {
-      icon: <CalenderIcon />,
+      icon: <RiMoneyDollarCircleLine size={25} />,
       name: "My Top Ups",
       path: "/my-top-up",
     },
     {
-      name: "RePayments",
+      name: "Re Payments",
       path: "/repayments",
-      icon: <PageIcon />,
+      icon: <BsCreditCard size={25} />,
       subItems: [
-        { name: "Make Payment", path: "/make-payment", pro: false },
-        { name: "Payment History", path: "/payment-history", pro: false },
+        { name: "Make Payment", path: "/make-payment" },
+        { name: "Payment History", path: "/payment-history" },
       ],
     },
     {
       name: "Help & Support",
       path: "/help-support",
-      icon: <PageIcon />,
+      icon: <BiSupport size={25} />,
       subItems: [
-        { name: "FAQ", path: "/faq", pro: false },
-        { name: "Contact Support", path: "/contact-us", pro: false },
+        { name: "FAQ", path: "/faq" },
+        { name: "Contact Support", path: "/contact-us" },
       ],
     },
     {
@@ -76,19 +85,13 @@ export default function UserSidebar() {
       onMouseEnter={() => !isExpanded && setIsHovered(true)}
       onMouseLeave={() => !isExpanded && setIsHovered(false)}
     >
-      <div className=" overflow-hidden">
+      <div className="overflow-hidden">
         {/* Logo */}
-        <div className=" p-4 border-b border-gray-200 dark:border-gray-800">
-          <Link href="/dashboard" className="flex items-center gap-3">
-            <div className="rounded-lg ">
-             <Image
-                width={120}
-                height={120}
-                src="/images/logo/auth-logo12.png"
-                alt="Logo"
-              />
+        <div className="flex justify-center">
+          <Link href="/dashboard" className="flex items-center gap-3 py-4">
+            <div className="rounded-lg">
+              <Image width={120} height={120} src="/images/logo/auth-logo12.png" alt="Logo" />
             </div>
-            
           </Link>
         </div>
 
@@ -97,18 +100,62 @@ export default function UserSidebar() {
           <ul className="space-y-2">
             {userMenuItems.map((item) => (
               <li key={item.path}>
-                <Link
-                  href={item.path}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive(item.path)
-                    ? "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
-                    : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
-                    }`}
-                >
-                  <span className="flex-shrink-0">{item.icon}</span>
-                  {(isExpanded || isHovered) && (
-                    <span className="whitespace-nowrap">{item.name}</span>
-                  )}
-                </Link>
+                {/* ---------- Parent item with submenu ---------- */}
+                {item.subItems ? (
+                  <>
+                    <button
+                      onClick={() => toggleSubMenu(item.name)}
+                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive(item.path)
+                        ? "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
+                        : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                        }`}
+                    >
+                      <span className="flex-shrink-0">{item.icon}</span>
+
+                      {(isExpanded || isHovered) && (
+                        <span className="whitespace-nowrap flex-1 text-left">{item.name}</span>
+                      )}
+
+                      {(isExpanded || isHovered) && (
+                        <IoIosArrowDown
+                          className={`transition-transform ${openMenu === item.name ? "rotate-180" : ""
+                            }`}
+                        />
+                      )}
+                    </button>
+
+                    {/* ---------- Submenu items ---------- */}
+                    {openMenu === item.name && (isExpanded || isHovered) && (
+                      <ul className="ml-10 mt-1 space-y-1">
+                        {item.subItems.map((sub) => (
+                          <li key={sub.path}>
+                            <Link
+                              href={sub.path}
+                              className={`block px-3 py-2 rounded-lg text-sm ${isActive(sub.path)
+                                ? "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
+                                : "text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+                                }`}
+                            >
+                              {sub.name}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </>
+                ) : (
+                  /* ---------- Normal items ---------- */
+                  <Link
+                    href={item.path}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive(item.path)
+                      ? "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
+                      : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                      }`}
+                  >
+                    <span className="flex-shrink-0">{item.icon}</span>
+                    {(isExpanded || isHovered) && <span>{item.name}</span>}
+                  </Link>
+                )}
               </li>
             ))}
           </ul>
@@ -121,18 +168,12 @@ export default function UserSidebar() {
             className="flex items-center justify-center w-full p-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
           >
             <svg
-              className={`w-5 h-5 transition-transform ${isExpanded ? "rotate-180" : ""
-                }`}
+              className={`w-5 h-5 transition-transform ${isExpanded ? "rotate-180" : ""}`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
-              />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
             </svg>
           </button>
         </div>
