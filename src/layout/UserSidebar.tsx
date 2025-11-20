@@ -76,15 +76,15 @@ export default function UserSidebar() {
       onMouseEnter={() => !isExpanded && setIsHovered(true)}
       onMouseLeave={() => !isExpanded && setIsHovered(false)}
     >
-      <div className="flex flex-col flex-1 overflow-hidden">
+      <div className=" overflow-hidden">
         {/* Logo */}
-        <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-800">
+        <div className=" p-4 border-b border-gray-200 dark:border-gray-800">
           <Link href="/dashboard" className="flex items-center gap-3">
-            <div className="rounded-lg flex items-center justify-center">
+            <div className="rounded-lg ">
              <Image
-                width={130}
-                height={130}
-                src="/images/logo/auth-logo.png"
+                width={120}
+                height={120}
+                src="/images/logo/auth-logo12.png"
                 alt="Logo"
               />
             </div>
