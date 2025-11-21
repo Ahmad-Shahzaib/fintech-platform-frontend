@@ -1,4 +1,6 @@
 "use client";
+import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from 'next/navigation';
 import { useState, useRef, useEffect } from 'react';
 
@@ -42,17 +44,17 @@ export default function MultiStepForm() {
     issuingCountry: 'United States',
     identityType: 'PASSPORT',
     nationalIdNumber: '',
-    
+
     // Documents
     documents: {
       idFront: null,
       idBack: null,
       selfie: null
     },
-    
+
     // Terms
     acceptTerms: false,
-    
+
     // Status
     verificationStatus: 'pending'
   });
@@ -133,29 +135,29 @@ export default function MultiStepForm() {
       }
 
       // Request camera access with specific constraints
-      const mediaStream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: {
           facingMode: 'user',
           width: { ideal: 1280, max: 1920 },
           height: { ideal: 720, max: 1080 }
-        } 
+        }
       });
-      
+
       // Check if we got video tracks
       if (mediaStream.getVideoTracks().length === 0) {
         throw new Error('No video tracks found');
       }
-      
+
       setStream(mediaStream);
       setIsCameraOpen(true);
-      
+
       // Set a timeout to check if video is playing
       setTimeout(() => {
         if (videoRef.current && videoRef.current.readyState !== 4) {
           console.warn('Video not playing after timeout');
         }
       }, 1000);
-      
+
     } catch (err: unknown) {
       console.error("Error accessing camera:", err);
       setCameraError((err as Error)?.message || "Could not access the camera");
@@ -211,17 +213,28 @@ export default function MultiStepForm() {
         {/* Header */}
         <div className="bg-white border-b border-gray-100 p-4 md:p-6 flex justify-between items-center">
           <div className="flex items-center space-x-2">
-            <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center">
-              <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
+
             <div>
-              <span className="text-xl font-bold text-gray-900">FinTech</span>
+              <Link href="/">
+                <Image
+                  width={154}
+                  height={32}
+                  className="dark:hidden"
+                  src="/images/logo/auth-logo12.png"
+                  alt="Logo"
+                />
+                <Image
+                  width={154}
+                  height={32}
+                  className="hidden dark:block"
+                  src="/images/logo/auth-logo12.png"
+                  alt="Logo"
+                />
+              </Link>
               <span className="ml-2 text-xs font-medium text-gray-400 bg-gray-100 px-2 py-1 rounded">KYC</span>
             </div>
           </div>
-         
+
         </div>
 
         {/* Progress Bar */}
@@ -259,14 +272,14 @@ export default function MultiStepForm() {
             <div className="space-y-6">
               <div>
                 <h2 className="text-xl font-bold text-gray-900 mb-6">Basic Personal Information</h2>
-                
+
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-semibold text-gray-900 mb-2">
                       Full Name <span className="text-red-500">*</span>
                     </label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       name="fullName"
                       value={formData.fullName}
                       onChange={handleInputChange}
@@ -279,8 +292,8 @@ export default function MultiStepForm() {
                     <label className="block text-sm font-semibold text-gray-900 mb-2">
                       Date of Birth <span className="text-red-500">*</span>
                     </label>
-                    <input 
-                      type="date" 
+                    <input
+                      type="date"
                       name="dateOfBirth"
                       value={formData.dateOfBirth}
                       onChange={handleInputChange}
@@ -292,8 +305,8 @@ export default function MultiStepForm() {
                     <label className="block text-sm font-semibold text-gray-900 mb-2">
                       Residential Address <span className="text-red-500">*</span>
                     </label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       name="residentialAddress"
                       value={formData.residentialAddress}
                       onChange={handleInputChange}
@@ -306,8 +319,8 @@ export default function MultiStepForm() {
                     <label className="block text-sm font-semibold text-gray-900 mb-2">
                       Email (already collected at signup)
                     </label>
-                    <input 
-                      type="email" 
+                    <input
+                      type="email"
                       name="email"
                       value={formData.email}
                       readOnly
@@ -319,8 +332,8 @@ export default function MultiStepForm() {
                     <label className="block text-sm font-semibold text-gray-900 mb-2">
                       Phone Number (optional but recommended)
                     </label>
-                    <input 
-                      type="tel" 
+                    <input
+                      type="tel"
                       name="phoneNumber"
                       value={formData.phoneNumber}
                       onChange={handleInputChange}
@@ -331,7 +344,7 @@ export default function MultiStepForm() {
                 </div>
               </div>
 
-              <button 
+              <button
                 onClick={nextStep}
                 className="w-full py-3.5 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 transition-colors flex items-center justify-center space-x-2"
               >
@@ -348,7 +361,7 @@ export default function MultiStepForm() {
             <div className="space-y-6">
               <div>
                 <h2 className="text-xl font-bold text-gray-900 mb-6">ID Verification</h2>
-                
+
                 <div className="mb-6">
                   <label className="block text-sm font-semibold text-gray-900 mb-3">
                     Issuing Country/Region
@@ -357,7 +370,7 @@ export default function MultiStepForm() {
                     <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
                       <span className="text-lg">🇺🇸</span>
                     </div>
-                    <select 
+                    <select
                       name="issuingCountry"
                       value={formData.issuingCountry}
                       onChange={handleInputChange}
@@ -381,9 +394,9 @@ export default function MultiStepForm() {
                     Select Identity Type
                   </label>
                   <p className="text-xs text-gray-400 mb-4">Should be your government issued photo identity</p>
-                  
+
                   <div className="relative">
-                    <select 
+                    <select
                       name="identityType"
                       value={formData.identityType}
                       onChange={handleInputChange}
@@ -405,7 +418,7 @@ export default function MultiStepForm() {
                   <label className="block text-sm font-semibold text-gray-900 mb-4">
                     Upload Documents
                   </label>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     <div>
                       <label className="block cursor-pointer">
@@ -420,16 +433,16 @@ export default function MultiStepForm() {
                             </svg>
                           )}
                         </div>
-                        <input 
-                          type="file" 
-                          className="hidden" 
+                        <input
+                          type="file"
+                          className="hidden"
                           onChange={(e) => handleFileChange(e, 'idFront')}
                           accept="image/jpeg,image/png,application/pdf"
                         />
                       </label>
                       <p className="text-xs text-gray-500 mt-2 text-center">Front Side</p>
                     </div>
-                    
+
                     {formData.identityType !== 'PASSPORT' && (
                       <div>
                         <label className="block cursor-pointer">
@@ -444,9 +457,9 @@ export default function MultiStepForm() {
                               </svg>
                             )}
                           </div>
-                          <input 
-                            type="file" 
-                            className="hidden" 
+                          <input
+                            type="file"
+                            className="hidden"
                             onChange={(e) => handleFileChange(e, 'idBack')}
                             accept="image/jpeg,image/png,application/pdf"
                           />
@@ -460,8 +473,8 @@ export default function MultiStepForm() {
                     <label className="block text-sm font-semibold text-gray-900 mb-2">
                       ID Number
                     </label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       name="nationalIdNumber"
                       value={formData.nationalIdNumber}
                       onChange={handleInputChange}
@@ -473,7 +486,7 @@ export default function MultiStepForm() {
               </div>
 
               <div className="flex space-x-3">
-                <button 
+                <button
                   onClick={prevStep}
                   className="flex-1 py-3.5 bg-gray-100 text-gray-600 text-sm font-medium rounded-xl hover:bg-gray-200 transition-colors flex items-center justify-center space-x-2"
                 >
@@ -482,7 +495,7 @@ export default function MultiStepForm() {
                   </svg>
                   <span>Back</span>
                 </button>
-                <button 
+                <button
                   onClick={nextStep}
                   className="flex-1 py-3.5 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 transition-colors flex items-center justify-center space-x-2"
                 >
@@ -500,7 +513,7 @@ export default function MultiStepForm() {
             <div className="space-y-6">
               <div>
                 <h2 className="text-xl font-bold text-gray-900 mb-6">Selfie Verification</h2>
-                
+
                 {isCameraOpen ? (
                   <div className="space-y-6">
                     {cameraError ? (
@@ -510,7 +523,7 @@ export default function MultiStepForm() {
                         </svg>
                         <h3 className="text-lg font-semibold text-red-800 mb-2">Camera Error</h3>
                         <p className="text-red-600 mb-4">{cameraError}</p>
-                        <button 
+                        <button
                           onClick={closeCamera}
                           className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
                         >
@@ -520,7 +533,7 @@ export default function MultiStepForm() {
                     ) : (
                       <>
                         <div className="relative bg-black rounded-2xl overflow-hidden" style={{ height: '400px' }}>
-                          <video 
+                          <video
                             ref={videoRef}
                             autoPlay
                             playsInline
@@ -542,9 +555,9 @@ export default function MultiStepForm() {
                             </div>
                           )}
                         </div>
-                        
+
                         <div className="flex justify-center space-x-4">
-                          <button 
+                          <button
                             onClick={closeCamera}
                             className="px-6 py-3 bg-gray-100 text-gray-600 text-sm font-medium rounded-xl hover:bg-gray-200 transition-colors flex items-center space-x-2"
                           >
@@ -553,7 +566,7 @@ export default function MultiStepForm() {
                             </svg>
                             <span>Cancel</span>
                           </button>
-                          <button 
+                          <button
                             onClick={captureSelfie}
                             disabled={!stream}
                             className={`px-6 py-3 text-sm font-medium rounded-xl transition-colors flex items-center space-x-2 ${stream ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
@@ -572,9 +585,9 @@ export default function MultiStepForm() {
                   <div className="text-center mb-8">
                     <div className="w-32 h-32 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-6 overflow-hidden">
                       {formData.documents.selfie ? (
-                        <img 
-                          src={URL.createObjectURL(formData.documents.selfie)} 
-                          alt="Selfie preview" 
+                        <img
+                          src={URL.createObjectURL(formData.documents.selfie)}
+                          alt="Selfie preview"
                           className="w-full h-full object-cover"
                         />
                       ) : (
@@ -583,30 +596,28 @@ export default function MultiStepForm() {
                         </svg>
                       )}
                     </div>
-                    
+
                     <div className="flex justify-center space-x-4 mb-4">
                       <button
                         onClick={() => setSelfieMethod('camera')}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                          selfieMethod === 'camera' 
-                            ? 'bg-blue-500 text-white' 
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        }`}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${selfieMethod === 'camera'
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          }`}
                       >
                         Take Selfie
                       </button>
                       <button
                         onClick={() => setSelfieMethod('upload')}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                          selfieMethod === 'upload' 
-                            ? 'bg-blue-500 text-white' 
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        }`}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${selfieMethod === 'upload'
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          }`}
                       >
                         Upload Picture
                       </button>
                     </div>
-                    
+
                     {selfieMethod === 'camera' ? (
                       <button
                         onClick={openCamera}
@@ -619,20 +630,20 @@ export default function MultiStepForm() {
                         <div className="inline-block px-6 py-3 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 transition-colors">
                           {formData.documents.selfie ? 'Change Selfie' : 'Choose File'}
                         </div>
-                        <input 
-                          type="file" 
-                          className="hidden" 
+                        <input
+                          type="file"
+                          className="hidden"
                           onChange={(e) => handleFileChange(e, 'selfie')}
                           accept="image/jpeg,image/png"
                         />
                       </label>
                     )}
-                    
+
                     <p className="text-xs text-gray-500 mt-4">
-                      {formData.documents.selfie 
-                        ? 'Selfie uploaded successfully' 
-                        : selfieMethod === 'camera' 
-                          ? 'Please take a clear selfie with good lighting' 
+                      {formData.documents.selfie
+                        ? 'Selfie uploaded successfully'
+                        : selfieMethod === 'camera'
+                          ? 'Please take a clear selfie with good lighting'
                           : 'Please upload a clear photo of yourself'}
                     </p>
                   </div>
@@ -670,7 +681,7 @@ export default function MultiStepForm() {
               </div>
 
               <div className="flex space-x-3">
-                <button 
+                <button
                   onClick={prevStep}
                   className="flex-1 py-3.5 bg-gray-100 text-gray-600 text-sm font-medium rounded-xl hover:bg-gray-200 transition-colors flex items-center justify-center space-x-2"
                 >
@@ -679,7 +690,7 @@ export default function MultiStepForm() {
                   </svg>
                   <span>Back</span>
                 </button>
-                <button 
+                <button
                   onClick={nextStep}
                   disabled={!formData.documents.selfie}
                   className={`flex-1 py-3.5 rounded-xl text-sm font-medium transition-colors flex items-center justify-center space-x-2 ${formData.documents.selfie ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
@@ -698,7 +709,7 @@ export default function MultiStepForm() {
             <div className="space-y-6">
               <div>
                 <h2 className="text-xl font-bold text-gray-900 mb-6">Review Your Information</h2>
-                
+
                 <div className="space-y-6">
                   <div className="bg-gray-50 rounded-2xl p-6">
                     <h3 className="text-sm font-semibold text-gray-900 mb-4">Personal Information</h3>
@@ -738,7 +749,7 @@ export default function MultiStepForm() {
                         <p className="font-medium">{formData.issuingCountry}</p>
                       </div>
                     </div>
-                    
+
                     <div className="mt-4">
                       <p className="text-gray-500 mb-2">Documents</p>
                       <div className="flex flex-wrap gap-4">
@@ -754,7 +765,7 @@ export default function MultiStepForm() {
                           </div>
                           <span className="text-xs">ID Front</span>
                         </div>
-                        
+
                         {formData.identityType !== 'PASSPORT' && (
                           <div className="flex items-center">
                             <div className={`w-5 h-5 rounded-full flex items-center justify-center mr-2 ${formData.documents.idBack ? 'bg-green-100' : 'bg-white'}`}>
@@ -769,7 +780,7 @@ export default function MultiStepForm() {
                             <span className="text-xs">ID Back</span>
                           </div>
                         )}
-                        
+
                         <div className="flex items-center">
                           <div className={`w-5 h-5 rounded-full flex items-center justify-center mr-2 ${formData.documents.selfie ? 'bg-green-100' : 'bg-white'}`}>
                             {formData.documents.selfie ? (
@@ -787,8 +798,8 @@ export default function MultiStepForm() {
                   </div>
 
                   <div className="flex items-start">
-                    <input 
-                      type="checkbox" 
+                    <input
+                      type="checkbox"
                       name="acceptTerms"
                       checked={formData.acceptTerms}
                       onChange={handleInputChange}
@@ -802,7 +813,7 @@ export default function MultiStepForm() {
               </div>
 
               <div className="flex space-x-3">
-                <button 
+                <button
                   onClick={prevStep}
                   className="flex-1 py-3.5 bg-gray-100 text-gray-600 text-sm font-medium rounded-xl hover:bg-gray-200 transition-colors flex items-center justify-center space-x-2"
                 >
@@ -811,7 +822,7 @@ export default function MultiStepForm() {
                   </svg>
                   <span>Back</span>
                 </button>
-                <button 
+                <button
                   onClick={handleSubmit}
                   disabled={!formData.acceptTerms}
                   className={`flex-1 py-3.5 rounded-xl text-sm font-medium transition-colors flex items-center justify-center space-x-2 ${formData.acceptTerms ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
@@ -830,7 +841,7 @@ export default function MultiStepForm() {
             <div className="space-y-6">
               <div className="text-center">
                 <h2 className="text-xl font-bold text-gray-900 mb-6">Verification Status</h2>
-                
+
                 <div className="w-24 h-24 mx-auto mb-6 rounded-full flex items-center justify-center bg-blue-100">
                   {formData.verificationStatus === 'pending' ? (
                     <svg className="w-12 h-12 text-blue-500 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -846,19 +857,19 @@ export default function MultiStepForm() {
                     </svg>
                   )}
                 </div>
-                
+
                 <h3 className="text-lg font-semibold mb-2">
                   {formData.verificationStatus === 'pending' && 'Verification in Progress'}
                   {formData.verificationStatus === 'approved' && 'Verification Approved'}
                   {formData.verificationStatus === 'rejected' && 'Verification Rejected'}
                 </h3>
-                
+
                 <p className="text-gray-600 mb-8 max-w-md mx-auto">
                   {formData.verificationStatus === 'pending' && 'We are currently reviewing your documents. This usually takes 1-2 business days.'}
                   {formData.verificationStatus === 'approved' && 'Your identity has been successfully verified. You now have full access to our services.'}
                   {formData.verificationStatus === 'rejected' && 'We could not verify your identity. Please check your documents and try again.'}
                 </p>
-                
+
                 <div className="bg-gray-50 rounded-2xl p-6 max-w-md mx-auto">
                   <h4 className="text-sm font-semibold text-gray-900 mb-4">Verification Details</h4>
                   <div className="space-y-3 text-sm">
@@ -872,23 +883,22 @@ export default function MultiStepForm() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-500">Status</span>
-                      <span className={`font-medium ${
-                        formData.verificationStatus === 'pending' ? 'text-yellow-600' : 
+                      <span className={`font-medium ${formData.verificationStatus === 'pending' ? 'text-yellow-600' :
                         formData.verificationStatus === 'approved' ? 'text-green-600' : 'text-red-600'
-                      }`}>
+                        }`}>
                         {formData.verificationStatus.charAt(0).toUpperCase() + formData.verificationStatus.slice(1)}
                       </span>
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="mt-8 flex flex-col sm:flex-row justify-center gap-4">
-                 
+
                   {formData.verificationStatus === 'approved' && (
                     <button
-                    onClick={() => router.push('/signin')}
-                    className="px-6 py-3 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 transition-colors">
-                      Continue to Login Page 
+                      onClick={() => router.push('/signin')}
+                      className="px-6 py-3 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 transition-colors">
+                      Continue to Login Page
                     </button>
                   )}
                 </div>
