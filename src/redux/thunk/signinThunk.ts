@@ -7,10 +7,6 @@ interface SigninData {
     email: string;
     password: string;
 }
-<<<<<<< HEAD
-=======
-
->>>>>>> dc389fb49d188bb7b44892c1840e2c6efd14abd1
 export const signinUser = (userData: SigninData) => async (dispatch: AppDispatch) => {
     try {
         dispatch({ type: 'auth/signinUser/pending' });

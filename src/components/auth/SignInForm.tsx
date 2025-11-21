@@ -8,26 +8,17 @@ import Button from "@/components/ui/button/Button";
 import { EyeCloseIcon, EyeIcon } from "@/icons";
 import Link from "next/link";
 import React, { useState } from "react";
-<<<<<<< HEAD
 import { useRouter } from 'next/navigation';
 import { useDispatch } from 'react-redux';
 import { AppDispatch } from '@/redux/store';
 import { loginUser } from '@/redux/thunk/authThunk';
-=======
-import { useDispatch, useSelector } from "react-redux";
-import { useRouter } from "next/navigation";
-import { signinUser } from "@/redux/thunk/signinThunk";
-import { AppDispatch } from "@/redux/store";
-import type { RootState } from "@/redux/rootReducer";
-import { clearError } from "@/redux/slice/signinSlice";
->>>>>>> dc389fb49d188bb7b44892c1840e2c6efd14abd1
+import { clearError } from '@/redux/slice/authSlice';
 
 export default function SignInForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-<<<<<<< HEAD
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const dispatch = useDispatch<AppDispatch>();
@@ -77,23 +68,6 @@ export default function SignInForm() {
       setError(msg);
     } finally {
       setIsLoading(false);
-=======
-
-  const dispatch = useDispatch<AppDispatch>();
-  const router = useRouter();
-  const { isLoading, error } = useSelector((state: RootState) => state.signin);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // The thunk now handles the CSRF token request internally,
-    // so no changes are needed here.
-    const result = await dispatch(signinUser({ email, password }));
-
-    // Check the payload for success, as the thunk returns an object
-    if (signinUser.fulfilled.match(result) && result.payload?.success) {
-      router.push('/dashboard'); // Redirect on success
->>>>>>> dc389fb49d188bb7b44892c1840e2c6efd14abd1
     }
   };
   // --- END OF MODIFIED SECTION ---
