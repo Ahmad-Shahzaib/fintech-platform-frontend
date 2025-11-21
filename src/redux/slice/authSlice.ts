@@ -1,11 +1,12 @@
 // redux/slice/authSlice.ts
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, PayloadAction, createAction } from '@reduxjs/toolkit';
 
 interface User {
   id: string;
   name: string;
   email: string;
   phone: string;
+  email_verified?: boolean;
 }
 
 interface AuthState {
@@ -22,6 +23,10 @@ const initialState: AuthState = {
   isAuthenticated: false,
 };
 
+export const registerUserPending = createAction('auth/registerUser/pending');
+export const registerUserFulfilled = createAction<User>('auth/registerUser/fulfilled');
+export const registerUserRejected = createAction<string>('auth/registerUser/rejected');
+
 const authSlice = createSlice({
   name: 'auth',
   initialState,
@@ -36,16 +41,16 @@ const authSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase('auth/registerUser/pending' as any, (state) => {
+      .addCase(registerUserPending, (state) => {
         state.isLoading = true;
         state.error = null;
       })
-      .addCase('auth/registerUser/fulfilled' as any, (state, action: PayloadAction<User>) => {
+      .addCase(registerUserFulfilled, (state, action: PayloadAction<User>) => {
         state.isLoading = false;
         state.user = action.payload;
         state.isAuthenticated = true;
       })
-      .addCase('auth/registerUser/rejected' as any, (state, action: PayloadAction<string>) => {
+      .addCase(registerUserRejected, (state, action: PayloadAction<string>) => {
         state.isLoading = false;
         state.error = action.payload;
       });

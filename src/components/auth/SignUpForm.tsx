@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Checkbox from "@/components/form/input/Checkbox";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
-import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "@/icons";
+import { EyeCloseIcon, EyeIcon } from "@/icons";
 import Link from "next/link";
 import { registerUser } from '@/redux/thunk/authThunk';
 import { AppDispatch } from '@/redux/store';
