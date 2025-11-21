@@ -157,11 +157,7 @@ export default function SignInForm() {
                     {error}
                   </div>
                 )}
-                <div className="p-4 text-sm bg-blue-50 border border-blue-200 rounded-lg dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-400">
-                  <p className="font-semibold mb-2">Demo Credentials:</p>
-                  <p><strong>Admin:</strong> admin@fintech.com / admin123</p>
-                  <p><strong>User:</strong> user@fintech.com / user123</p>
-                </div>
+
                 <div>
                   <Label>
                     Email <span className="text-error-500">*</span>{" "}
