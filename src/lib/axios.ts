@@ -1,13 +1,20 @@
-// lib/axios.ts
+// @/lib/axios.ts
+
 import axios from 'axios';
 
 const rawBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://fintechapi.softsuitetech.com/api';
 const baseURL = rawBase.replace(/\/+$/, '');
 
 const api = axios.create({
+<<<<<<< HEAD
   baseURL,
   // Do not set a default Content-Type here so axios can correctly
   // set the header (and boundary) when sending FormData (file uploads).
+=======
+  // Make sure this URL points to your backend API
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'https://fintechapi.softsuitetech.com/public/api',
+  withCredentials: true, // CRITICAL: Allows sending/receiving cookies
+>>>>>>> dc389fb49d188bb7b44892c1840e2c6efd14abd1
   headers: {
     'Accept': 'application/json',
     'X-Requested-With': 'XMLHttpRequest',
@@ -15,6 +22,7 @@ const api = axios.create({
   withCredentials: true,
 });
 
+<<<<<<< HEAD
 // Add request interceptor for debugging
 api.interceptors.request.use(request => {
   try {
@@ -52,13 +60,31 @@ api.interceptors.request.use(request => {
 
   return request;
 });
+=======
+// Request Interceptor: Automatically attach CSRF token and Bearer token
+api.interceptors.request.use((config) => {
+  // 1. Attach CSRF Token from cookie for state-changing requests
+  // This is required by Laravel's Sanctum for web-based authentication
+  const csrfToken = document.cookie
+    .split('; ')
+    .find(row => row.startsWith('XSRF-TOKEN='))
+    ?.split('=')[1];
+>>>>>>> dc389fb49d188bb7b44892c1840e2c6efd14abd1
 
-// Add response interceptor for debugging
-api.interceptors.response.use(response => {
-  console.log('Response:', response);
-  return response;
-}, error => {
-  console.log('Response Error:', error);
+  if (csrfToken) {
+    // Laravel expects the CSRF token in the 'X-XSRF-TOKEN' header
+    config.headers['X-XSRF-TOKEN'] = decodeURIComponent(csrfToken);
+  }
+
+  // 2. Attach Bearer token if it exists in localStorage
+  // This is for API authentication after login
+  const authToken = localStorage.getItem('authToken');
+  if (authToken) {
+    config.headers['Authorization'] = `Bearer ${authToken}`;
+  }
+
+  return config;
+}, (error) => {
   return Promise.reject(error);
 });
 

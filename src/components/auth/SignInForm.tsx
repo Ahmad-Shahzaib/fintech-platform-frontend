@@ -1,3 +1,5 @@
+// @/components/SignInForm.tsx
+
 "use client";
 import Checkbox from "@/components/form/input/Checkbox";
 import Input from "@/components/form/input/InputField";
@@ -6,16 +8,26 @@ import Button from "@/components/ui/button/Button";
 import { EyeCloseIcon, EyeIcon } from "@/icons";
 import Link from "next/link";
 import React, { useState } from "react";
+<<<<<<< HEAD
 import { useRouter } from 'next/navigation';
 import { useDispatch } from 'react-redux';
 import { AppDispatch } from '@/redux/store';
 import { loginUser } from '@/redux/thunk/authThunk';
+=======
+import { useDispatch, useSelector } from "react-redux";
+import { useRouter } from "next/navigation";
+import { signinUser } from "@/redux/thunk/signinThunk";
+import { AppDispatch } from "@/redux/store";
+import type { RootState } from "@/redux/rootReducer";
+import { clearError } from "@/redux/slice/signinSlice";
+>>>>>>> dc389fb49d188bb7b44892c1840e2c6efd14abd1
 
 export default function SignInForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+<<<<<<< HEAD
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const dispatch = useDispatch<AppDispatch>();
@@ -65,14 +77,41 @@ export default function SignInForm() {
       setError(msg);
     } finally {
       setIsLoading(false);
+=======
+
+  const dispatch = useDispatch<AppDispatch>();
+  const router = useRouter();
+  const { isLoading, error } = useSelector((state: RootState) => state.signin);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // The thunk now handles the CSRF token request internally,
+    // so no changes are needed here.
+    const result = await dispatch(signinUser({ email, password }));
+
+    // Check the payload for success, as the thunk returns an object
+    if (signinUser.fulfilled.match(result) && result.payload?.success) {
+      router.push('/dashboard'); // Redirect on success
+>>>>>>> dc389fb49d188bb7b44892c1840e2c6efd14abd1
     }
   };
   // --- END OF MODIFIED SECTION ---
 
+  // Clear error when user starts typing
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setEmail(e.target.value);
+    if (error) dispatch(clearError());
+  };
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPassword(e.target.value);
+    if (error) dispatch(clearError());
+  };
+
   return (
     <div className="flex flex-col flex-1 lg:w-1/2 w-full">
       <div className="w-full max-w-md sm:pt-10 mx-auto mb-5">
-
       </div>
       <div className="flex flex-col justify-center flex-1 w-full max-w-md mx-auto">
         <div>
@@ -156,8 +195,8 @@ export default function SignInForm() {
                   <Input
                     placeholder="info@gmail.com"
                     type="email"
-                    defaultValue={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    value={email}
+                    onChange={handleEmailChange}
                     disabled={isLoading}
                   />
                 </div>
@@ -169,8 +208,8 @@ export default function SignInForm() {
                     <Input
                       type={showPassword ? "text" : "password"}
                       placeholder="Enter your password"
-                      defaultValue={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      value={password}
+                      onChange={handlePasswordChange}
                       disabled={isLoading}
                     />
                     <span

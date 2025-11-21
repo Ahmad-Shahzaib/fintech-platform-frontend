@@ -79,9 +79,13 @@ export default function UserSidebar() {
 
   return (
     <aside
-      className={`fixed inset-y-0 left-0 z-50 flex-col justify-between bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 transition-all duration-300 ease-in-out ${isMobileOpen ? "translate-x-0" : "-translate-x-full"
-        } lg:translate-x-0 ${isExpanded || isHovered ? "w-[290px]" : "w-[90px]"
-        } hidden lg:flex`}
+      className={`fixed inset-y-0 left-0 z-50 flex flex-col justify-between 
+  bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800
+  transition-all duration-300 ease-in-out
+  ${isMobileOpen ? "translate-x-0" : "-translate-x-full"}
+  lg:translate-x-0
+  ${isExpanded || isHovered ? "w-[290px]" : "w-[90px]"}
+  flex`}
       onMouseEnter={() => !isExpanded && setIsHovered(true)}
       onMouseLeave={() => !isExpanded && setIsHovered(false)}
     >
