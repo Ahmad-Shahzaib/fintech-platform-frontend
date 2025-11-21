@@ -2,22 +2,47 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from 'next/navigation';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import type { AppDispatch } from '@/redux/store';
+import { resetKycState } from '@/redux/slice/kycSlice';
+import { submitKyc } from '@/redux/thunk/kycThunks';
+import { RootState } from '@/redux/rootReducer';
+
+const COUNTRY_OPTIONS = [
+  { code: 'US', label: 'United States' },
+  { code: 'CA', label: 'Canada' },
+  { code: 'GB', label: 'United Kingdom' },
+  { code: 'AU', label: 'Australia' },
+] as const;
+
+const DOCUMENT_OPTIONS = [
+  { value: 'passport', label: 'Passport' },
+  { value: 'national_id', label: 'National ID Card' },
+  { value: 'drivers_license', label: "Driver's License" },
+] as const;
+
+const DOCUMENT_LABELS = DOCUMENT_OPTIONS.reduce<Record<string, string>>((acc, opt) => {
+  acc[opt.value] = opt.label;
+  return acc;
+}, {});
 
 type DocumentFiles = {
-  idFront: File | null;
-  idBack: File | null;
+  front: File | null;
+  back: File | null;
   selfie: File | null;
 };
 
 type FormDataType = {
   fullName: string;
   dateOfBirth: string;
-  residentialAddress: string;
+  address: string;
+  city: string;
+  country: string;
+  postalCode: string;
   email: string;
   phoneNumber: string;
-  issuingCountry: string;
-  identityType: string;
+  documentType: string;
   nationalIdNumber: string;
   documents: DocumentFiles;
   acceptTerms: boolean;
@@ -32,23 +57,33 @@ export default function MultiStepForm() {
   const [cameraError, setCameraError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const router = useRouter();
+  const dispatch = useDispatch<AppDispatch>();
+
+  // Get KYC state from Redux
+  const { loading: isLoading, error, submission } = useSelector((state: RootState) => state.kyc);
+  const submissionData = submission?.data ?? null;
+  const isSubmitted = Boolean(submissionData);
+
+  // Get auth user (to prefill email) if available
+  const authUser = useSelector((state: RootState) => state.auth.user);
+
   const [formData, setFormData] = useState<FormDataType>({
     // Personal Information
     fullName: '',
     dateOfBirth: '',
-    residentialAddress: '',
-    email: 'user@example.com', // Already collected at signup
+    address: '',
+    city: '',
+    country: COUNTRY_OPTIONS[0].code,
+    postalCode: '',
+    email: '', // Already collected at signup
     phoneNumber: '',
-
-    // ID Verification
-    issuingCountry: 'United States',
-    identityType: 'PASSPORT',
+    documentType: DOCUMENT_OPTIONS[0].value,
     nationalIdNumber: '',
 
     // Documents
     documents: {
-      idFront: null,
-      idBack: null,
+      front: null,
+      back: null,
       selfie: null
     },
 
@@ -58,6 +93,61 @@ export default function MultiStepForm() {
     // Status
     verificationStatus: 'pending'
   });
+
+  const [clientError, setClientError] = useState<string | null>(null);
+
+  // Handle form submission using Redux thunk
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setClientError(null);
+
+    const missingFields: string[] = [];
+    if (!formData.fullName.trim()) missingFields.push('Full name');
+    if (!formData.dateOfBirth) missingFields.push('Date of birth');
+    if (!formData.address.trim()) missingFields.push('Address');
+    if (!formData.city.trim()) missingFields.push('City');
+    if (!formData.postalCode.trim()) missingFields.push('Postal code');
+    if (!formData.phoneNumber.trim()) missingFields.push('Phone number');
+    if (!formData.email.trim()) missingFields.push('Email');
+    if (!formData.documents.front) missingFields.push('Front document');
+    if (formData.documentType !== 'passport' && !formData.documents.back) missingFields.push('Back document');
+    if (!formData.documents.selfie) missingFields.push('Selfie');
+    if (!formData.acceptTerms) missingFields.push('Terms acceptance');
+
+    if (missingFields.length > 0) {
+      setClientError(`Please complete the following before submitting: ${missingFields.join(', ')}`);
+      return;
+    }
+
+    // Dispatch the submitKyc thunk with form data
+    dispatch(submitKyc({
+      fullName: formData.fullName,
+      dateOfBirth: formData.dateOfBirth,
+      address: formData.address,
+      city: formData.city,
+      country: formData.country,
+      postalCode: formData.postalCode,
+      email: formData.email,
+      phoneNumber: formData.phoneNumber,
+      documentType: formData.documentType,
+      nationalIdNumber: formData.nationalIdNumber,
+      documents: formData.documents,
+      acceptTerms: formData.acceptTerms
+    }));
+
+    // Move to the status step
+    setCurrentStep(5);
+  };
+
+  // Update verification status when submission is successful
+  useEffect(() => {
+    if (isSubmitted && submissionData) {
+      setFormData(prev => ({
+        ...prev,
+        verificationStatus: submissionData.status
+      }));
+    }
+  }, [isSubmitted, submissionData]);
 
   // Clean up camera stream when component unmounts
   useEffect(() => {
@@ -93,6 +183,28 @@ export default function MultiStepForm() {
     } as unknown as FormDataType));
   };
 
+  // Prefill email from auth user or localStorage if available
+  useEffect(() => {
+    if (authUser && authUser.email) {
+      setFormData(prev => ({ ...prev, email: authUser.email }));
+      return;
+    }
+
+    try {
+      if (typeof window !== 'undefined') {
+        const stored = localStorage.getItem('user');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed?.email) {
+            setFormData(prev => ({ ...prev, email: parsed.email }));
+          }
+        }
+      }
+    } catch {
+      // ignore parse errors
+    }
+  }, [authUser]);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, docType: keyof DocumentFiles) => {
     const file = e.target.files?.[0] ?? null;
     if (file) {
@@ -112,18 +224,6 @@ export default function MultiStepForm() {
 
   const prevStep = () => {
     if (currentStep > 1) setCurrentStep(currentStep - 1);
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setTimeout(() => {
-      setFormData(prev => ({
-        ...prev,
-        verificationStatus: 'Pending Review'
-      }));
-      setCurrentStep(5);
-    }, 2000);
-    setCurrentStep(5);
   };
 
   const openCamera = async () => {
@@ -288,31 +388,92 @@ export default function MultiStepForm() {
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-900 mb-2">
-                      Date of Birth <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="date"
-                      name="dateOfBirth"
-                      value={formData.dateOfBirth}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3.5 bg-gray-50 border-0 rounded-xl text-gray-900 text-sm placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
-                    />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-900 mb-2">
+                        Date of Birth <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="date"
+                        name="dateOfBirth"
+                        value={formData.dateOfBirth}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3.5 bg-gray-50 border-0 rounded-xl text-gray-900 text-sm placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-900 mb-2">
+                        Phone Number <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="tel"
+                        name="phoneNumber"
+                        value={formData.phoneNumber}
+                        onChange={handleInputChange}
+                        placeholder="e.g. +1 (555) 123-4567"
+                        className="w-full px-4 py-3.5 bg-gray-50 border-0 rounded-xl text-gray-900 text-sm placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                      />
+                    </div>
                   </div>
 
                   <div>
                     <label className="block text-sm font-semibold text-gray-900 mb-2">
-                      Residential Address <span className="text-red-500">*</span>
+                      Street Address <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
-                      name="residentialAddress"
-                      value={formData.residentialAddress}
+                      name="address"
+                      value={formData.address}
                       onChange={handleInputChange}
-                      placeholder="e.g. 123 Main Street, New York"
+                      placeholder="e.g. 123 Main Street"
                       className="w-full px-4 py-3.5 bg-gray-50 border-0 rounded-xl text-gray-900 text-sm placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
                     />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-900 mb-2">
+                        City <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="city"
+                        value={formData.city}
+                        onChange={handleInputChange}
+                        placeholder="e.g. New York"
+                        className="w-full px-4 py-3.5 bg-gray-50 border-0 rounded-xl text-gray-900 text-sm placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-900 mb-2">
+                        Country <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        name="country"
+                        value={formData.country}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3.5 bg-gray-50 border-0 rounded-xl text-gray-900 text-sm focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                      >
+                        {COUNTRY_OPTIONS.map(option => (
+                          <option key={option.code} value={option.code}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-900 mb-2">
+                        Postal Code <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="postalCode"
+                        value={formData.postalCode}
+                        onChange={handleInputChange}
+                        placeholder="e.g. 10001"
+                        className="w-full px-4 py-3.5 bg-gray-50 border-0 rounded-xl text-gray-900 text-sm placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                      />
+                    </div>
                   </div>
 
                   <div>
@@ -323,22 +484,9 @@ export default function MultiStepForm() {
                       type="email"
                       name="email"
                       value={formData.email}
-                      readOnly
-                      className="w-full px-4 py-3.5 bg-gray-100 border-0 rounded-xl text-gray-900 text-sm placeholder-gray-400"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-900 mb-2">
-                      Phone Number (optional but recommended)
-                    </label>
-                    <input
-                      type="tel"
-                      name="phoneNumber"
-                      value={formData.phoneNumber}
                       onChange={handleInputChange}
-                      placeholder="e.g. +1 (555) 123-4567"
-                      className="w-full px-4 py-3.5 bg-gray-50 border-0 rounded-xl text-gray-900 text-sm placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                      placeholder="e.g. you@example.com"
+                      className="w-full px-4 py-3.5 bg-gray-100 border-0 rounded-xl text-gray-900 text-sm placeholder-gray-400"
                     />
                   </div>
                 </div>
@@ -363,33 +511,6 @@ export default function MultiStepForm() {
                 <h2 className="text-xl font-bold text-gray-900 mb-6">ID Verification</h2>
 
                 <div className="mb-6">
-                  <label className="block text-sm font-semibold text-gray-900 mb-3">
-                    Issuing Country/Region
-                  </label>
-                  <div className="relative">
-                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
-                      <span className="text-lg">🇺🇸</span>
-                    </div>
-                    <select
-                      name="issuingCountry"
-                      value={formData.issuingCountry}
-                      onChange={handleInputChange}
-                      className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border-0 rounded-xl text-gray-900 text-sm focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all appearance-none cursor-pointer"
-                    >
-                      <option value="United States">United States</option>
-                      <option value="Canada">Canada</option>
-                      <option value="United Kingdom">United Kingdom</option>
-                      <option value="Australia">Australia</option>
-                    </select>
-                    <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                      <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mb-6">
                   <label className="block text-sm font-semibold text-gray-900 mb-1">
                     Select Identity Type
                   </label>
@@ -397,14 +518,16 @@ export default function MultiStepForm() {
 
                   <div className="relative">
                     <select
-                      name="identityType"
-                      value={formData.identityType}
+                      name="documentType"
+                      value={formData.documentType}
                       onChange={handleInputChange}
                       className="w-full px-4 py-3.5 bg-gray-50 border-0 rounded-xl text-gray-900 text-sm focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all appearance-none cursor-pointer"
                     >
-                      <option value="PASSPORT">Passport</option>
-                      <option value="NATIONAL ID">National ID Card</option>
-                      <option value="DRIVERS_LICENSE">Driver's License</option>
+                      {DOCUMENT_OPTIONS.map(option => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
                     </select>
                     <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
                       <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -422,8 +545,8 @@ export default function MultiStepForm() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     <div>
                       <label className="block cursor-pointer">
-                        <div className={`aspect-[5/3] bg-gray-50 rounded-2xl flex flex-col items-center justify-center border-2 border-dashed transition-all hover:bg-gray-100 ${formData.documents.idFront ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}>
-                          {formData.documents.idFront ? (
+                        <div className={`aspect-5/3 bg-gray-50 rounded-2xl flex flex-col items-center justify-center border-2 border-dashed transition-all hover:bg-gray-100 ${formData.documents.front ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}>
+                          {formData.documents.front ? (
                             <svg className="w-8 h-8 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                             </svg>
@@ -436,18 +559,18 @@ export default function MultiStepForm() {
                         <input
                           type="file"
                           className="hidden"
-                          onChange={(e) => handleFileChange(e, 'idFront')}
+                          onChange={(e) => handleFileChange(e, 'front')}
                           accept="image/jpeg,image/png,application/pdf"
                         />
                       </label>
                       <p className="text-xs text-gray-500 mt-2 text-center">Front Side</p>
                     </div>
 
-                    {formData.identityType !== 'PASSPORT' && (
+                    {formData.documentType !== 'passport' && (
                       <div>
                         <label className="block cursor-pointer">
-                          <div className={`aspect-[5/3] bg-gray-50 rounded-2xl flex flex-col items-center justify-center border-2 border-dashed transition-all hover:bg-gray-100 ${formData.documents.idBack ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}>
-                            {formData.documents.idBack ? (
+                          <div className={`aspect-5/3 bg-gray-50 rounded-2xl flex flex-col items-center justify-center border-2 border-dashed transition-all hover:bg-gray-100 ${formData.documents.back ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}>
+                            {formData.documents.back ? (
                               <svg className="w-8 h-8 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                               </svg>
@@ -460,7 +583,7 @@ export default function MultiStepForm() {
                           <input
                             type="file"
                             className="hidden"
-                            onChange={(e) => handleFileChange(e, 'idBack')}
+                            onChange={(e) => handleFileChange(e, 'back')}
                             accept="image/jpeg,image/png,application/pdf"
                           />
                         </label>
@@ -585,11 +708,14 @@ export default function MultiStepForm() {
                   <div className="text-center mb-8">
                     <div className="w-32 h-32 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-6 overflow-hidden">
                       {formData.documents.selfie ? (
-                        <img
+                        <>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
                           src={URL.createObjectURL(formData.documents.selfie)}
                           alt="Selfie preview"
                           className="w-full h-full object-cover"
-                        />
+                          />
+                        </>
                       ) : (
                         <svg className="w-16 h-16 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -723,12 +849,30 @@ export default function MultiStepForm() {
                         <p className="font-medium">{formData.dateOfBirth || 'Not provided'}</p>
                       </div>
                       <div>
-                        <p className="text-gray-500">Residential Address</p>
-                        <p className="font-medium">{formData.residentialAddress || 'Not provided'}</p>
+                        <p className="text-gray-500">Street Address</p>
+                        <p className="font-medium">{formData.address || 'Not provided'}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500">City</p>
+                        <p className="font-medium">{formData.city || 'Not provided'}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500">Country</p>
+                        <p className="font-medium">
+                          {COUNTRY_OPTIONS.find(option => option.code === formData.country)?.label || 'Not provided'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500">Postal Code</p>
+                        <p className="font-medium">{formData.postalCode || 'Not provided'}</p>
                       </div>
                       <div>
                         <p className="text-gray-500">Phone Number</p>
                         <p className="font-medium">{formData.phoneNumber || 'Not provided'}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500">Email</p>
+                        <p className="font-medium">{formData.email || 'Not provided'}</p>
                       </div>
                     </div>
                   </div>
@@ -738,7 +882,7 @@ export default function MultiStepForm() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                       <div>
                         <p className="text-gray-500">Identity Type</p>
-                        <p className="font-medium">{formData.identityType}</p>
+                        <p className="font-medium">{DOCUMENT_LABELS[formData.documentType] ?? formData.documentType}</p>
                       </div>
                       <div>
                         <p className="text-gray-500">ID Number</p>
@@ -746,7 +890,9 @@ export default function MultiStepForm() {
                       </div>
                       <div>
                         <p className="text-gray-500">Issuing Country</p>
-                        <p className="font-medium">{formData.issuingCountry}</p>
+                        <p className="font-medium">
+                          {COUNTRY_OPTIONS.find(option => option.code === formData.country)?.label ?? formData.country}
+                        </p>
                       </div>
                     </div>
 
@@ -754,8 +900,8 @@ export default function MultiStepForm() {
                       <p className="text-gray-500 mb-2">Documents</p>
                       <div className="flex flex-wrap gap-4">
                         <div className="flex items-center">
-                          <div className={`w-5 h-5 rounded-full flex items-center justify-center mr-2 ${formData.documents.idFront ? 'bg-green-100' : 'bg-white'}`}>
-                            {formData.documents.idFront ? (
+                          <div className={`w-5 h-5 rounded-full flex items-center justify-center mr-2 ${formData.documents.front ? 'bg-green-100' : 'bg-white'}`}>
+                            {formData.documents.front ? (
                               <svg className="h-3 w-3 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                               </svg>
@@ -766,10 +912,10 @@ export default function MultiStepForm() {
                           <span className="text-xs">ID Front</span>
                         </div>
 
-                        {formData.identityType !== 'PASSPORT' && (
+                        {formData.documentType !== 'passport' && (
                           <div className="flex items-center">
-                            <div className={`w-5 h-5 rounded-full flex items-center justify-center mr-2 ${formData.documents.idBack ? 'bg-green-100' : 'bg-white'}`}>
-                              {formData.documents.idBack ? (
+                            <div className={`w-5 h-5 rounded-full flex items-center justify-center mr-2 ${formData.documents.back ? 'bg-green-100' : 'bg-white'}`}>
+                              {formData.documents.back ? (
                                 <svg className="h-3 w-3 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                                 </svg>
@@ -824,15 +970,60 @@ export default function MultiStepForm() {
                 </button>
                 <button
                   onClick={handleSubmit}
-                  disabled={!formData.acceptTerms}
-                  className={`flex-1 py-3.5 rounded-xl text-sm font-medium transition-colors flex items-center justify-center space-x-2 ${formData.acceptTerms ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
+                  disabled={!formData.acceptTerms || isLoading}
+                  className={`flex-1 py-3.5 rounded-xl text-sm font-medium transition-colors flex items-center justify-center space-x-2 ${formData.acceptTerms && !isLoading ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
                 >
-                  <span>Submit Verification</span>
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
+                  {isLoading ? (
+                    <>
+                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      <span>Submitting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Submit Verification</span>
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </>
+                  )}
                 </button>
               </div>
+
+              {/* Display error message if submission failed */}
+              {(clientError || error) && (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
+                  <p className="text-red-600 text-sm">
+                    {(() => {
+                      if (clientError) return clientError;
+                      const serverError = error;
+                      if (!serverError) return null;
+                      try {
+                        const parsed = JSON.parse(String(serverError));
+                        const messages: string[] = [];
+                        if (Array.isArray(parsed)) {
+                          parsed.forEach((m) => messages.push(String(m)));
+                        } else if (typeof parsed === 'object' && parsed !== null) {
+                          for (const k in parsed as Record<string, unknown>) {
+                            const v = (parsed as Record<string, unknown>)[k];
+                            if (Array.isArray(v)) {
+                              v.forEach((m) => messages.push(`${k}: ${String(m)}`));
+                            } else {
+                              messages.push(`${k}: ${String(v)}`);
+                            }
+                          }
+                        } else {
+                          messages.push(String(parsed));
+                        }
+                        return messages.join(' | ');
+                      } catch {
+                        return String(serverError);
+                      }
+                    })()}
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
@@ -875,11 +1066,11 @@ export default function MultiStepForm() {
                   <div className="space-y-3 text-sm">
                     <div className="flex justify-between">
                       <span className="text-gray-500">Reference ID</span>
-                      <span className="font-medium">KYC-{Math.floor(Math.random() * 1000000)}</span>
+                      <span className="font-medium">{submissionData ? `KYC-${submissionData.id}` : 'KYC-' + Math.floor(Math.random() * 1000000)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-500">Submission Date</span>
-                      <span className="font-medium">{new Date().toLocaleDateString()}</span>
+                      <span className="font-medium">{submissionData ? new Date(submissionData.submitted_at).toLocaleDateString() : new Date().toLocaleDateString()}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-500">Status</span>
@@ -893,6 +1084,16 @@ export default function MultiStepForm() {
                 </div>
 
                 <div className="mt-8 flex flex-col sm:flex-row justify-center gap-4">
+                  {formData.verificationStatus === 'rejected' && (
+                    <button
+                      onClick={() => {
+                        setCurrentStep(1);
+                        dispatch(resetKycState());
+                      }}
+                      className="px-6 py-3 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 transition-colors">
+                      Try Again
+                    </button>
+                  )}
 
                   {formData.verificationStatus === 'approved' && (
                     <button

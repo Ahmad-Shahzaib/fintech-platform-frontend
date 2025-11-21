@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Checkbox from "@/components/form/input/Checkbox";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
-import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "@/icons";
+import { EyeCloseIcon, EyeIcon } from "@/icons";
 import Link from "next/link";
 import { registerUser } from '@/redux/thunk/authThunk';
 import { AppDispatch } from '@/redux/store';
@@ -36,6 +36,7 @@ export default function SignUpForm() {
     if (error) dispatch(clearError());
   };
 
+  // --- MODIFIED SECTION ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -44,12 +45,26 @@ export default function SignUpForm() {
       return;
     }
 
+    // Dispatch the thunk and wait for it to complete.
     const result = await dispatch(registerUser(formData));
 
-    if (!result.error) {
-      router.push('/dashboard'); // Redirect on success
+    // Use the match helper to detect fulfilled vs rejected
+    if (registerUser.fulfilled.match(result)) {
+      const token = result.payload?.token ?? null;
+      console.log('✅ Registration successful. Token:', token);
+      try {
+        // expose a temporary global variable for quick inspection in console
+        (window as any).__AUTH_TOKEN = token;
+      } catch (e) {
+        // ignore
+      }
+      router.push('/kyc-form'); // Redirect to KYC form on success
+    } else {
+      const err = result.payload ?? (result as any).error?.message ?? 'Registration failed';
+      console.log('❌ Registration failed:', err);
     }
   };
+  // --- END OF MODIFIED SECTION ---
 
   return (
     <div className="flex flex-col flex-1 lg:w-1/2 w-full overflow-y-auto no-scrollbar">

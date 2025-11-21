@@ -1,56 +1,66 @@
-// redux/slice/authSlice.ts
+// In your authSlice.ts file
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-}
+import { registerUser, loginUser } from '../thunk/authThunk';
 
 interface AuthState {
-  user: User | null;
+  user: any | null;
+  token: string | null;
   isLoading: boolean;
   error: string | null;
-  isAuthenticated: boolean;
 }
 
 const initialState: AuthState = {
   user: null,
+  token: null,
   isLoading: false,
   error: null,
-  isAuthenticated: false,
 };
 
 const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
+    // your other reducers like logout, clearError, etc.
     clearError: (state) => {
       state.error = null;
-    },
-    logout: (state) => {
-      state.user = null;
-      state.isAuthenticated = false;
-    },
+    }
   },
   extraReducers: (builder) => {
     builder
-      .addCase('auth/registerUser/pending' as any, (state) => {
+      // --- Register User Cases ---
+      .addCase(registerUser.pending, (state) => {
         state.isLoading = true;
         state.error = null;
       })
-      .addCase('auth/registerUser/fulfilled' as any, (state, action: PayloadAction<User>) => {
+      .addCase(registerUser.fulfilled, (state, action: PayloadAction<any>) => {
         state.isLoading = false;
-        state.user = action.payload;
-        state.isAuthenticated = true;
+        // action.payload may be { user, token } (we normalized it in the thunk)
+        state.user = action.payload?.user ?? action.payload;
+        state.token = action.payload?.token ?? state.token;
+        state.error = null;
       })
-      .addCase('auth/registerUser/rejected' as any, (state, action: PayloadAction<string>) => {
+      .addCase(registerUser.rejected, (state, action) => {
         state.isLoading = false;
-        state.error = action.payload;
+        // action.payload contains the error message from rejectWithValue
+        state.error = action.payload as string;
+      })
+      // --- Login User Cases ---
+      .addCase(loginUser.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(loginUser.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.user = action.payload.user;
+        state.token = action.payload.token;
+        state.error = null;
+      })
+      .addCase(loginUser.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
       });
   },
 });
 
-export const { clearError, logout } = authSlice.actions;
+export const { clearError } = authSlice.actions;
 export default authSlice.reducer;

@@ -3,10 +3,13 @@ import Checkbox from "@/components/form/input/Checkbox";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import Button from "@/components/ui/button/Button";
-import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "@/icons";
+import { EyeCloseIcon, EyeIcon } from "@/icons";
 import Link from "next/link";
 import React, { useState } from "react";
-import { useAuth } from "@/context/AuthContext";
+import { useRouter } from 'next/navigation';
+import { useDispatch } from 'react-redux';
+import { AppDispatch } from '@/redux/store';
+import { loginUser } from '@/redux/thunk/authThunk';
 
 export default function SignInForm() {
   const [showPassword, setShowPassword] = useState(false);
@@ -15,26 +18,56 @@ export default function SignInForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const dispatch = useDispatch<AppDispatch>();
+  const router = useRouter();
+
+  // --- MODIFIED SECTION ---
+  // In your SignInForm component
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
-
     try {
-      const result = await login({ email, password });
+      console.log("Dispatching loginUser...");
+      // Let's capture the result to inspect it
+      const resultAction = await dispatch(loginUser({ email, password }));
 
-      if (!result.success) {
-        setError(result.error || "Login failed");
+      console.log("Thunk Result Action:", resultAction);
+
+      // Check if the action was fulfilled
+      if (loginUser.fulfilled.match(resultAction)) {
+        console.log("✅ Login was FULFILLED. Payload:", resultAction.payload);
+        const token = resultAction.payload?.token ?? null;
+        console.log('🔑 Token after login:', token);
+        try {
+          (window as any).__AUTH_TOKEN = token;
+        } catch (e) {
+          // ignore
+        }
+        // If we get here, the thunk succeeded. The redirect SHOULD happen.
+        router.push('/');
+      } else {
+        // This means the thunk was rejected
+        console.error("❌ Login was REJECTED. Payload:", resultAction.payload);
+        // Manually set the error from the rejected action's payload
+        setError(resultAction.payload as string);
       }
-    } catch (err) {
-      setError("An unexpected error occurred");
-      console.error("Login error:", err);
+
+    } catch (err: unknown) {
+      // This block will now likely only catch unexpected errors, not rejected thunks
+      console.error("🚫 An unexpected error occurred in handleSubmit:", err);
+      let msg = 'An unexpected error occurred';
+      if (typeof err === 'object' && err !== null) {
+        const e = err as any;
+        if (typeof e.message === 'string') msg = e.message;
+      }
+      setError(msg);
     } finally {
       setIsLoading(false);
     }
   };
+  // --- END OF MODIFIED SECTION ---
 
   return (
     <div className="flex flex-col flex-1 lg:w-1/2 w-full">
