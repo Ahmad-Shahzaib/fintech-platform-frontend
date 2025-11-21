@@ -73,9 +73,25 @@ export const loginUser = createAsyncThunk(
         password: payload.password,
       });
 
-      const respData = response.data?.data;
-      const token = respData?.token ?? null;
-      const user = respData?.user ?? null;
+      const respData = response.data?.data ?? response.data;
+      const token = respData?.token ?? respData?.access_token ?? response.data?.token ?? null;
+      const userPayload = respData?.user ?? response.data?.user ?? null;
+
+      // Normalize user shape so the rest of the app receives consistent role string
+      const user = userPayload
+        ? {
+            id: String(userPayload.id),
+            email: userPayload.email,
+            name: userPayload.name,
+            role:
+              typeof userPayload.role === 'string' && (userPayload.role === 'admin' || userPayload.role === 'user')
+                ? userPayload.role
+                : typeof userPayload.role_id === 'number' && userPayload.role_id === 1
+                ? 'admin'
+                : 'user',
+            avatar: userPayload.avatar ?? userPayload.user?.avatar,
+          }
+        : null;
 
       if (!token || !user) {
         return rejectWithValue(response.data?.message || 'Invalid login response');

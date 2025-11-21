@@ -8,6 +8,7 @@ import Button from "@/components/ui/button/Button";
 import { EyeCloseIcon, EyeIcon } from "@/icons";
 import Link from "next/link";
 import React, { useState } from "react";
+import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useDispatch } from 'react-redux';
 import { AppDispatch } from '@/redux/store';
@@ -23,6 +24,7 @@ export default function SignInForm() {
   const [isLoading, setIsLoading] = useState(false);
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
+  const { checkAuth } = useAuth();
 
   // --- MODIFIED SECTION ---
   // In your SignInForm component
@@ -48,8 +50,25 @@ export default function SignInForm() {
         } catch (e) {
           // ignore
         }
-        // If we get here, the thunk succeeded. The redirect SHOULD happen.
-        router.push('/');
+        // If we get here, the thunk succeeded. Update AuthContext to reflect the new login
+        // (the login thunk writes localStorage so checkAuth will pick it up and redirect based on role)
+        // Update the AuthContext state from localStorage
+        try { checkAuth(); } catch (e) { /* ignore */ }
+
+        // Determine routing based on role returned from the thunk, if available
+        const payloadUser = (resultAction.payload as any)?.user;
+        const roleFromPayload = payloadUser?.role ?? payloadUser?.role_id;
+        if (typeof roleFromPayload === 'string') {
+          if (roleFromPayload === 'admin') router.push('/');
+          else router.push('/dashboard');
+        } else if (typeof roleFromPayload === 'number') {
+          // If role_id is number: 1 => admin
+          if (roleFromPayload === 1) router.push('/');
+          else router.push('/dashboard');
+        } else {
+          // Fallback
+          router.push('/');
+        }
       } else {
         // This means the thunk was rejected
         console.error("❌ Login was REJECTED. Payload:", resultAction.payload);
