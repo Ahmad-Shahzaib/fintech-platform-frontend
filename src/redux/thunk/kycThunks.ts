@@ -34,6 +34,58 @@ export interface KycSubmissionResponse {
     };
 }
 
+// Types for fetching pending KYC list
+export interface PendingKycItem {
+    id: number;
+    user: {
+        id: number;
+        name: string;
+        email: string;
+    };
+    full_name: string;
+    document_type: string;
+    status: string;
+    submitted_at: string;
+}
+
+export interface PendingKycResponse {
+    data: PendingKycItem[];
+    pagination: {
+        total: number;
+        current_page: number;
+        last_page: number;
+    };
+}
+
+// Type for detailed KYC response
+export interface KycDetailResponse {
+    data: {
+        id: number;
+        user: {
+            id: number;
+            name: string;
+            email: string;
+        };
+        full_name: string;
+        date_of_birth?: string | null;
+        address?: string | null;
+        city?: string | null;
+        postal_code?: string | null;
+        country?: string | null;
+        phone_number?: string | null;
+        document_type?: string | null;
+        document_number?: string | null;
+        document_front_url?: string | null;
+        document_back_url?: string | null;
+        selfie_url?: string | null;
+        status: string;
+        rejection_reason?: string | null;
+        submitted_at?: string | null;
+        reviewed_at?: string | null;
+        reviewer?: string | null;
+    };
+}
+
 const appendIfPresent = (formData: FormData, key: string, value: string | null | undefined) => {
     if (value === undefined || value === null) return;
     formData.append(key, value);
@@ -120,5 +172,48 @@ export const submitKyc = createAsyncThunk<
         }
 
         return rejectWithValue('An unknown error occurred during KYC submission.');
+    }
+});
+
+// Fetch pending KYC requests (paginated)
+export const fetchPendingKyc = createAsyncThunk<
+    PendingKycResponse,
+    { page?: number } | undefined,
+    { state: RootState }
+>('kyc/fetchPending', async (params, { rejectWithValue }) => {
+    try {
+        const page = params?.page ?? 1;
+        const response = await api.get('/admin/kyc/pending', { params: { page } });
+        const data: PendingKycResponse = response.data;
+        return data;
+    } catch (error: unknown) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const err: any = error;
+        if (err?.response && err.response.data) {
+            return rejectWithValue(err.response.data.message || JSON.stringify(err.response.data));
+        }
+        if (err instanceof Error) return rejectWithValue(err.message);
+        return rejectWithValue('Failed to fetch pending KYC requests');
+    }
+});
+
+// Fetch KYC detail by id
+export const fetchKycDetail = createAsyncThunk<
+    KycDetailResponse,
+    number,
+    { state: RootState }
+>('kyc/fetchDetail', async (kycId, { rejectWithValue }) => {
+    try {
+        const response = await api.get(`/admin/kyc/${kycId}`);
+        const data: KycDetailResponse = response.data;
+        return data;
+    } catch (error: unknown) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const err: any = error;
+        if (err?.response && err.response.data) {
+            return rejectWithValue(err.response.data.message || JSON.stringify(err.response.data));
+        }
+        if (err instanceof Error) return rejectWithValue(err.message);
+        return rejectWithValue('Failed to fetch KYC detail');
     }
 });

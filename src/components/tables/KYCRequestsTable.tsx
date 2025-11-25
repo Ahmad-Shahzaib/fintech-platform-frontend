@@ -1,12 +1,22 @@
 "use client"
-
-import { useState, useMemo } from "react"
-import { ChevronDown, Eye, Check, X, Search, Filter, Download, Clock, AlertCircle, CheckCircle } from "lucide-react"
+import { useState, useMemo, useEffect } from "react"
+import { useDispatch, useSelector } from 'react-redux'
+import { ChevronDown, Eye, Check, X, Search, Filter, Download, Clock, AlertCircle, CheckCircle, MoreVertical } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+    DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu"
+
+import type { AppDispatch } from '@/redux/store'
+import type { RootState } from '@/redux/rootReducer'
+import { fetchAdminPendingKyc, approveAdminKyc, rejectAdminKyc } from '@/redux/thunk/adminKycThunks'
 
 interface KYCRequest {
     id: string
@@ -17,124 +27,72 @@ interface KYCRequest {
     documentType: string
     submittedAmount: number
     country: string
+    rawId?: number
 }
 
-const mockKYCRequests: KYCRequest[] = [
-    {
-        id: "KYC-001",
-        name: "John Anderson",
-        email: "john.anderson@email.com",
-        date: "2025-11-18",
-        status: "pending",
-        documentType: "Passport",
-        submittedAmount: 50000,
-        country: "United States",
-    },
-    {
-        id: "KYC-002",
-        name: "Sarah Mitchell",
-        email: "sarah.mitchell@email.com",
-        date: "2025-11-17",
-        status: "approved",
-        documentType: "Driver License",
-        submittedAmount: 25000,
-        country: "Canada",
-    },
-    {
-        id: "KYC-003",
-        name: "Michael Chen",
-        email: "michael.chen@email.com",
-        date: "2025-11-16",
-        status: "rejected",
-        documentType: "National ID",
-        submittedAmount: 75000,
-        country: "Singapore",
-    },
-    {
-        id: "KYC-004",
-        name: "Emma Rodriguez",
-        email: "emma.rodriguez@email.com",
-        date: "2025-11-15",
-        status: "pending",
-        documentType: "Passport",
-        submittedAmount: 40000,
-        country: "Mexico",
-    },
-    {
-        id: "KYC-005",
-        name: "David Thompson",
-        email: "david.thompson@email.com",
-        date: "2025-11-14",
-        status: "approved",
-        documentType: "Passport",
-        submittedAmount: 100000,
-        country: "United Kingdom",
-    },
-    {
-        id: "KYC-006",
-        name: "Lisa Wagner",
-        email: "lisa.wagner@email.com",
-        date: "2025-11-13",
-        status: "pending",
-        documentType: "Driver License",
-        submittedAmount: 30000,
-        country: "Germany",
-    },
-    {
-        id: "KYC-007",
-        name: "Alex Park",
-        email: "alex.park@email.com",
-        date: "2025-11-12",
-        status: "approved",
-        documentType: "National ID",
-        submittedAmount: 60000,
-        country: "South Korea",
-    },
-    {
-        id: "KYC-008",
-        name: "Nina Patel",
-        email: "nina.patel@email.com",
-        date: "2025-11-11",
-        status: "rejected",
-        documentType: "Passport",
-        submittedAmount: 90000,
-        country: "India",
-    },
-]
-
 export function KYCRequestsTable() {
+    const dispatch = useDispatch<AppDispatch>()
+    const adminPending = useSelector((state: RootState) => state.adminKyc?.pendingList ?? [])
+    const adminLoading = useSelector((state: RootState) => state.adminKyc?.pendingLoading ?? false)
+
+    useEffect(() => {
+        dispatch(fetchAdminPendingKyc())
+    }, [dispatch])
+
     const [searchTerm, setSearchTerm] = useState("")
     const [selectedStatus, setSelectedStatus] = useState<"all" | "pending" | "approved" | "rejected">("all")
-    const [sortBy, setSortBy] = useState<"date" | "name" | "amount">("date")
+    const [sortBy, setSortBy] = useState<"date" | "name">("date")
 
-    // Filter and sort data
+    // Build base list from admin API when available, otherwise return empty array
+    const baseRequests = useMemo(() => {
+        if (adminPending && adminPending.length > 0) {
+            return adminPending.map((item) => ({
+                id: `KYC-${item.id}`,
+                name: item.full_name || item.user?.name || 'Unknown',
+                email: item.user?.email || '',
+                date: item.submitted_at,
+                status: (item.status as "pending" | "approved" | "rejected") || 'pending',
+                documentType: item.document_type || '',
+                submittedAmount: 0,
+                country: '',
+                rawId: item.id,
+            }))
+        }
+        return [] // Return empty array instead of undefined
+    }, [adminPending])
+
+    const handleApprove = (rawId?: number) => {
+        if (!rawId) return
+        dispatch(approveAdminKyc(rawId))
+    }
+
+    const handleReject = (rawId?: number) => {
+        if (!rawId) return
+        dispatch(rejectAdminKyc(rawId))
+    }
+
     const filteredRequests = useMemo(() => {
-        const filtered = mockKYCRequests.filter((request) => {
+        // Now baseRequests is always an array, so we can safely filter
+        const filtered = baseRequests.filter((request) => {
             const matchesSearch =
                 request.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 request.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 request.id.toLowerCase().includes(searchTerm.toLowerCase())
-
             const matchesStatus = selectedStatus === "all" || request.status === selectedStatus
-
             return matchesSearch && matchesStatus
         })
 
-        // Sort
         filtered.sort((a, b) => {
             switch (sortBy) {
                 case "name":
                     return a.name.localeCompare(b.name)
-                case "amount":
-                    return b.submittedAmount - a.submittedAmount
                 case "date":
                 default:
                     return new Date(b.date).getTime() - new Date(a.date).getTime()
             }
         })
-
         return filtered
-    }, [searchTerm, selectedStatus, sortBy])
+    }, [baseRequests, searchTerm, selectedStatus, sortBy])
 
     const getStatusIcon = (status: string) => {
         switch (status) {
@@ -161,10 +119,18 @@ export function KYCRequestsTable() {
     }
 
     const stats = {
-        total: mockKYCRequests.length,
-        pending: mockKYCRequests.filter((r) => r.status === "pending").length,
-        approved: mockKYCRequests.filter((r) => r.status === "approved").length,
-        rejected: mockKYCRequests.filter((r) => r.status === "rejected").length,
+        total: baseRequests.length,
+        pending: baseRequests.filter((r) => r.status === "pending").length,
+        approved: baseRequests.filter((r) => r.status === "approved").length,
+        rejected: baseRequests.filter((r) => r.status === "rejected").length,
+    }
+
+    if (adminLoading) {
+        return (
+            <div className="flex justify-center items-center h-64">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+            </div>
+        )
     }
 
     return (
@@ -182,7 +148,6 @@ export function KYCRequestsTable() {
                         </div>
                     </div>
                 </Card>
-
                 <Card className="p-4 bg-card border border-border hover:border-yellow-300/30 transition-colors">
                     <div className="flex items-center justify-between">
                         <div>
@@ -194,7 +159,6 @@ export function KYCRequestsTable() {
                         </div>
                     </div>
                 </Card>
-
                 <Card className="p-4 bg-card border border-border hover:border-green-300/30 transition-colors">
                     <div className="flex items-center justify-between">
                         <div>
@@ -206,7 +170,6 @@ export function KYCRequestsTable() {
                         </div>
                     </div>
                 </Card>
-
                 <Card className="p-4 bg-card border border-border hover:border-red-300/30 transition-colors">
                     <div className="flex items-center justify-between">
                         <div>
@@ -223,7 +186,6 @@ export function KYCRequestsTable() {
             {/* Filters and Search */}
             <Card className="p-4 bg-card border border-border">
                 <div className="flex flex-col md:flex-row gap-4 flex-wrap items-center">
-                    {/* Search */}
                     <div className="flex-1">
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -236,7 +198,6 @@ export function KYCRequestsTable() {
                         </div>
                     </div>
 
-                    {/* Status Filter */}
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="outline" className="gap-2 bg-input border-border text-foreground hover:bg-muted">
@@ -253,22 +214,19 @@ export function KYCRequestsTable() {
                         </DropdownMenuContent>
                     </DropdownMenu>
 
-                    {/* Sort */}
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="outline" className="gap-2 bg-input border-border text-foreground hover:bg-muted">
-                                Sort: {sortBy}
+                                Sort: {sortBy === "date" ? "Date" : "Name"}
                                 <ChevronDown className="w-4 h-4" />
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => setSortBy("date")}>By Date</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => setSortBy("name")}>By Name</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setSortBy("amount")}>By Amount</DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
 
-                    {/* Export Button */}
                     <Button className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground">
                         <Download className="w-4 h-4" />
                         Export
@@ -276,45 +234,47 @@ export function KYCRequestsTable() {
                 </div>
             </Card>
 
-            {/* Mobile list (shown on small screens) */}
+            {/* Mobile List */}
             <div className="md:hidden space-y-3">
                 {filteredRequests.length > 0 ? (
                     filteredRequests.map((request) => (
                         <Card key={request.id} className="p-4 bg-card border border-border">
                             <div className="flex justify-between items-start">
-                                <div>
+                                <div className="flex-1">
                                     <p className="text-sm font-mono text-primary font-medium">{request.id}</p>
                                     <p className="text-sm text-foreground font-semibold">{request.name}</p>
                                     <p className="text-xs text-muted-foreground">{request.email}</p>
                                 </div>
-                                <div className="text-right">
-                                    <p className="text-sm font-semibold text-foreground">${request.submittedAmount.toLocaleString()}</p>
-                                    <div className="mt-2">
-                                        <Badge variant="outline" className={`gap-1.5 ${getStatusColor(request.status)}`}>
-                                            {getStatusIcon(request.status)}
-                                            <span className="capitalize">{request.status}</span>
-                                        </Badge>
-                                    </div>
-                                </div>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                                            <MoreVertical className="w-4 h-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem className="gap-2">
+                                            <Eye className="w-4 h-4" /> View
+                                        </DropdownMenuItem>
+                                        {request.status === "pending" && (
+                                            <>
+                                                <DropdownMenuSeparator />
+                                                <DropdownMenuItem className="gap-2 text-green-600" onClick={() => handleApprove(request.rawId)}>
+                                                    <Check className="w-4 h-4" /> Approve
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem className="gap-2 text-red-600" onClick={() => handleReject(request.rawId)}>
+                                                    <X className="w-4 h-4" /> Reject
+                                                </DropdownMenuItem>
+                                            </>
+                                        )}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                             </div>
 
-                            <div className="flex gap-2 mt-3">
-                                <Button size="sm" variant="outline" className="gap-1 bg-input border-border text-foreground hover:bg-muted">
-                                    <Eye className="w-4 h-4" />
-                                    <span className="inline">View</span>
-                                </Button>
-                                {request.status === "pending" && (
-                                    <>
-                                        <Button size="sm" className="gap-1 bg-green-600 hover:bg-green-700 text-white">
-                                            <Check className="w-4 h-4" />
-                                            <span className="inline">Approve</span>
-                                        </Button>
-                                        <Button size="sm" variant="outline" className="gap-1 bg-red-50 border-red-200 text-red-700 hover:bg-red-100">
-                                            <X className="w-4 h-4" />
-                                            <span className="inline">Reject</span>
-                                        </Button>
-                                    </>
-                                )}
+                            <div className="mt-3 flex items-center justify-between">
+                                <Badge variant="outline" className={`gap-1.5 ${getStatusColor(request.status)}`}>
+                                    {getStatusIcon(request.status)}
+                                    <span className="capitalize">{request.status}</span>
+                                </Badge>
                             </div>
                         </Card>
                     ))
@@ -327,7 +287,7 @@ export function KYCRequestsTable() {
                 )}
             </div>
 
-            {/* Desktop table (hidden on small screens) */}
+            {/* Desktop Table */}
             <Card className="bg-card border border-border overflow-hidden hidden md:block">
                 <div className="overflow-x-auto">
                     <table className="w-full">
@@ -335,10 +295,8 @@ export function KYCRequestsTable() {
                             <tr className="border-b border-border bg-muted/50">
                                 <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Request ID</th>
                                 <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Name</th>
-                                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground hidden md:table-cell">Email</th>
-                                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground hidden md:table-cell">Country</th>
-                                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground hidden md:table-cell">Document Type</th>
-                                <th className="px-6 py-4 text-right text-sm font-semibold text-foreground">Amount (USD)</th>
+                                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground hidden lg:table-cell">Email</th>
+                                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground hidden xl:table-cell">Document Type</th>
                                 <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Status</th>
                                 <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Date</th>
                                 <th className="px-6 py-4 text-center text-sm font-semibold text-foreground">Actions</th>
@@ -349,15 +307,11 @@ export function KYCRequestsTable() {
                                 <tr key={request.id} className="hover:bg-muted/50 transition-colors">
                                     <td className="px-6 py-4 text-sm font-mono text-primary font-medium">{request.id}</td>
                                     <td className="px-6 py-4 text-sm text-foreground font-medium">{request.name}</td>
-                                    <td className="px-6 py-4 text-sm text-muted-foreground hidden md:table-cell">{request.email}</td>
-                                    <td className="px-6 py-4 text-sm text-foreground hidden md:table-cell">{request.country}</td>
-                                    <td className="px-6 py-4 text-sm text-foreground hidden md:table-cell">
+                                    <td className="px-6 py-4 text-sm text-muted-foreground hidden lg:table-cell">{request.email}</td>
+                                    <td className="px-6 py-4 text-sm text-foreground hidden xl:table-cell">
                                         <Badge variant="outline" className="bg-muted text-foreground border-border">
                                             {request.documentType}
                                         </Badge>
-                                    </td>
-                                    <td className="px-6 py-4 text-sm text-right font-semibold text-foreground">
-                                        ${request.submittedAmount.toLocaleString()}
                                     </td>
                                     <td className="px-6 py-4">
                                         <Badge variant="outline" className={`gap-1.5 ${getStatusColor(request.status)}`}>
@@ -365,7 +319,7 @@ export function KYCRequestsTable() {
                                             <span className="capitalize">{request.status}</span>
                                         </Badge>
                                     </td>
-                                    <td className="px-6 py-4 text-sm text-muted-foreground hidden md:table-cell">
+                                    <td className="px-6 py-4 text-sm text-muted-foreground">
                                         {new Date(request.date).toLocaleDateString("en-US", {
                                             year: "numeric",
                                             month: "short",
@@ -373,32 +327,29 @@ export function KYCRequestsTable() {
                                         })}
                                     </td>
                                     <td className="px-6 py-4">
-                                        <div className="flex gap-2 justify-center">
-                                            <Button
-                                                size="sm"
-                                                variant="outline"
-                                                className="gap-1 bg-input border-border text-foreground hover:bg-muted"
-                                            >
-                                                <Eye className="w-4 h-4" />
-                                                <span className="hidden sm:inline">View</span>
-                                            </Button>
-                                            {request.status === "pending" && (
-                                                <>
-                                                    <Button size="sm" className="gap-1 bg-green-600 hover:bg-green-700 text-white">
-                                                        <Check className="w-4 h-4" />
-                                                        <span className="hidden sm:inline">Approve</span>
-                                                    </Button>
-                                                    <Button
-                                                        size="sm"
-                                                        variant="outline"
-                                                        className="gap-1 bg-red-50 border-red-200 text-red-700 hover:bg-red-100"
-                                                    >
-                                                        <X className="w-4 h-4" />
-                                                        <span className="hidden sm:inline">Reject</span>
-                                                    </Button>
-                                                </>
-                                            )}
-                                        </div>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" size="icon">
+                                                    <MoreVertical className="w-4 h-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuItem className="gap-2">
+                                                    <Eye className="w-4 h-4" /> View Details
+                                                </DropdownMenuItem>
+                                                {request.status === "pending" && (
+                                                    <>
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem className="gap-2 text-green-600 font-medium" onClick={() => handleApprove(request.rawId)}>
+                                                            <Check className="w-4 h-4" /> Approve
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem className="gap-2 text-red-600 font-medium" onClick={() => handleReject(request.rawId)}>
+                                                            <X className="w-4 h-4" /> Reject
+                                                        </DropdownMenuItem>
+                                                    </>
+                                                )}
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
                                     </td>
                                 </tr>
                             ))}
@@ -406,7 +357,6 @@ export function KYCRequestsTable() {
                     </table>
                 </div>
 
-                {/* Empty State */}
                 {filteredRequests.length === 0 && (
                     <div className="px-6 py-12 text-center">
                         <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
@@ -419,13 +369,13 @@ export function KYCRequestsTable() {
             {/* Pagination */}
             <div className="flex items-center justify-between">
                 <p className="text-sm text-muted-foreground">
-                    Showing {filteredRequests.length} of {mockKYCRequests.length} requests
+                    Showing {filteredRequests.length} of {baseRequests.length} requests
                 </p>
                 <div className="flex gap-2">
-                    <Button variant="outline" className="bg-input border-border text-foreground hover:bg-muted">
+                    <Button variant="outline" disabled className="bg-input border-border text-foreground hover:bg-muted">
                         Previous
                     </Button>
-                    <Button variant="outline" className="bg-input border-border text-foreground hover:bg-muted">
+                    <Button variant="outline" disabled className="bg-input border-border text-foreground hover:bg-muted">
                         Next
                     </Button>
                 </div>

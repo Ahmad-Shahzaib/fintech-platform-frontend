@@ -308,7 +308,7 @@ export default function MultiStepForm() {
   };
 
   return (
-    <div className=" flex items-center justify-center min-h-screen ">
+    <div className=" flex items-center justify-center min-h-screen p-4">
       <div className="w-full max-w-5xl bg-white rounded-3xl shadow-sm overflow-hidden">
         {/* Header */}
         <div className="bg-white border-b border-gray-100 p-4 md:p-6 flex justify-between items-center">

@@ -61,8 +61,12 @@ export default function UserSidebar() {
     // kyc-form 
     {
       icon: <Ri24HoursFill size={25} />,
-      name: "KYC Form",
+      name: "KYC",
       path: "/kyc-form",
+      subItems: [
+        { name: "Submit KYC", path: "/kyc-form" },
+        { name: "KYC Status", path: "/kyc-status" },
+      ],
 
 
     },
