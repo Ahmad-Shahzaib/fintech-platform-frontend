@@ -2,7 +2,7 @@
 
 import { useSidebar } from "@/context/SidebarContext";
 import { MdDashboard } from "react-icons/md";
-import { RiMoneyDollarCircleLine } from "react-icons/ri";
+import { Ri24HoursFill, RiMoneyDollarBoxFill, RiMoneyDollarCircleFill, RiMoneyDollarCircleLine } from "react-icons/ri";
 import { BsCreditCard } from "react-icons/bs";
 import { BiSupport } from "react-icons/bi"; import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -48,6 +48,7 @@ export default function UserSidebar() {
         { name: "Payment History", path: "/payment-history" },
       ],
     },
+
     {
       name: "Help & Support",
       path: "/help-support",
@@ -56,6 +57,14 @@ export default function UserSidebar() {
         { name: "FAQ", path: "/faq" },
         { name: "Contact Support", path: "/contact-us" },
       ],
+    },
+    // kyc-form 
+    {
+      icon: <Ri24HoursFill size={25} />,
+      name: "KYC Form",
+      path: "/kyc-form",
+
+
     },
     {
       name: "Settings",

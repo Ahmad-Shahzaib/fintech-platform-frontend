@@ -308,7 +308,7 @@ export default function MultiStepForm() {
   };
 
   return (
-    <div className="bg-gray-50 flex items-center justify-center min-h-screen p-4">
+    <div className=" flex items-center justify-center min-h-screen ">
       <div className="w-full max-w-5xl bg-white rounded-3xl shadow-sm overflow-hidden">
         {/* Header */}
         <div className="bg-white border-b border-gray-100 p-4 md:p-6 flex justify-between items-center">
@@ -711,9 +711,9 @@ export default function MultiStepForm() {
                         <>
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
-                          src={URL.createObjectURL(formData.documents.selfie)}
-                          alt="Selfie preview"
-                          className="w-full h-full object-cover"
+                            src={URL.createObjectURL(formData.documents.selfie)}
+                            alt="Selfie preview"
+                            className="w-full h-full object-cover"
                           />
                         </>
                       ) : (
@@ -959,7 +959,7 @@ export default function MultiStepForm() {
               </div>
 
               <div className="flex space-x-3">
- a               <button
+                a               <button
                   onClick={prevStep}
                   className="flex-1 py-3.5 bg-gray-100 text-gray-600 text-sm font-medium rounded-xl hover:bg-gray-200 transition-colors flex items-center justify-center space-x-2"
                 >
