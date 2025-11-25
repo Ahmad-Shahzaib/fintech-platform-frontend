@@ -110,3 +110,39 @@ export const loginUser = createAsyncThunk(
     }
   }
 );
+
+// Thunk to resend verification email
+export const resendVerification = createAsyncThunk(
+  'auth/resendVerification',
+  async (email: string, { rejectWithValue }) => {
+    try {
+      // Prefer authenticated resend (some backends require auth, e.g., Laravel)
+      let response;
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers.Authorization = `Bearer ${token}`;
+
+      if (token || email) {
+        // Send the email in the body and include Authorization when available
+        response = await api.post('/email/verification-notification', { email }, { headers });
+      } else {
+        return rejectWithValue('No token or email provided to resend verification');
+      }
+      const message = response.data?.message ?? 'Verification email sent';
+      return message;
+    } catch (err: any) {
+      if (axios.isAxiosError(err)) {
+        // If backend returns 403, provide a clear message
+        const status = err.response?.status;
+        const serverMsg = err.response?.data?.message;
+        if (status === 403) {
+          return rejectWithValue(serverMsg || 'Forbidden: resend verification requires authentication');
+        }
+        const message = serverMsg || err.message || 'Failed to resend verification';
+        return rejectWithValue(message);
+      }
+      return rejectWithValue('Network error');
+    }
+  }
+);

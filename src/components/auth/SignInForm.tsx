@@ -12,7 +12,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useDispatch } from 'react-redux';
 import { AppDispatch } from '@/redux/store';
-import { loginUser } from '@/redux/thunk/authThunk';
+import { loginUser, resendVerification } from '@/redux/thunk/authThunk';
 import { clearError } from '@/redux/slice/authSlice';
 
 export default function SignInForm() {
@@ -39,31 +39,15 @@ export default function SignInForm() {
     setResendMessage(null);
 
     try {
-      // Replace with your actual API call to resend verification email
-      const response = await fetch('/api/resend-verification', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setResendMessage({
-          type: 'success',
-          message: 'Verification email resent successfully! Please check your inbox.'
-        });
+      const resultAction = await dispatch(resendVerification(email));
+      if (resendVerification.fulfilled.match(resultAction)) {
+        setResendMessage({ type: 'success', message: String(resultAction.payload) });
       } else {
-        setResendMessage({
-          type: 'error',
-          message: data.message || 'Failed to resend verification email'
-        });
+        const msg = (resultAction.payload as any) || 'Failed to resend verification email';
+        setResendMessage({ type: 'error', message: String(msg) });
       }
-    } catch (error) {
-      setResendMessage({
-        type: 'error',
-        message: 'An error occurred while resending verification email'
-      });
+    } catch (err) {
+      setResendMessage({ type: 'error', message: 'An error occurred while resending verification email' });
     } finally {
       setIsResending(false);
     }
@@ -108,6 +92,15 @@ export default function SignInForm() {
         console.log("Email is verified, proceeding with login");
         try { checkAuth(); } catch (e) { /* ignore */ }
 
+        // Signal the app to show the KYC modal after login until KYC is submitted
+        try {
+          if (typeof window !== 'undefined') {
+            sessionStorage.setItem('kyc_modal', '1');
+          }
+        } catch (e) {
+          // ignore
+        }
+
         // Determine routing based on role returned from the thunk, if available
         const roleFromPayload = user?.role ?? user?.role_id;
         if (typeof roleFromPayload === 'string') {
@@ -124,8 +117,30 @@ export default function SignInForm() {
       } else {
         // This means the thunk was rejected
         console.error("❌ Login was REJECTED. Payload:", resultAction.payload);
-        // Manually set the error from the rejected action's payload
-        setError(resultAction.payload as string);
+        const payloadMsg = (resultAction.payload as any) || 'Login failed';
+        const msg = typeof payloadMsg === 'string' ? payloadMsg : JSON.stringify(payloadMsg);
+        // Show server-provided error
+        setError(msg);
+
+        // If server says email is not verified, auto-trigger resend and show a message
+        const lower = msg.toLowerCase();
+        if (lower.includes('not verified') || lower.includes('verify your email') || msg.includes('Your email address is not verified')) {
+          setIsResending(true);
+          setResendMessage(null);
+          try {
+            const ra = await dispatch(resendVerification(email));
+            if (resendVerification.fulfilled.match(ra)) {
+              setResendMessage({ type: 'success', message: String(ra.payload) });
+            } else {
+              const rm = (ra.payload as any) || 'Failed to resend verification email';
+              setResendMessage({ type: 'error', message: String(rm) });
+            }
+          } catch (e) {
+            setResendMessage({ type: 'error', message: 'An error occurred while resending verification email' });
+          } finally {
+            setIsResending(false);
+          }
+        }
       }
 
     } catch (err: unknown) {
@@ -212,13 +227,13 @@ export default function SignInForm() {
             </div> */}
             <div className="relative py-3 sm:py-5">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-200 dark:border-gray-800"></div>
+                {/* <div className="w-full border-t border-gray-200 dark:border-gray-800"></div> */}
               </div>
-              <div className="relative flex justify-center text-sm">
+              {/* <div className="relative flex justify-center text-sm">
                 <span className="p-2 text-gray-400 bg-white dark:bg-gray-900 sm:px-5 sm:py-2">
                   Or
                 </span>
-              </div>
+              </div> */}
             </div>
             <form onSubmit={handleSubmit}>
               <div className="space-y-6">

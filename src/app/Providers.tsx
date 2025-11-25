@@ -5,6 +5,7 @@ import { ThemeProvider } from '@/context/ThemeContext';
 import { AuthProvider } from '@/context/AuthContext';
 import { SidebarProvider } from '@/context/SidebarContext';
 import ReduxProvider from '@/redux/Provider';
+import KycModalLauncher from '@/components/kyc-form/KycModalLauncher';
 
 // Use default export
 export default function Providers({ children }: { children: React.ReactNode }) {
@@ -12,7 +13,10 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     <ReduxProvider>
       <ThemeProvider>
         <AuthProvider>
-          <SidebarProvider>{children}</SidebarProvider>
+          <SidebarProvider>
+            {children}
+            <KycModalLauncher />
+          </SidebarProvider>
         </AuthProvider>
       </ThemeProvider>
     </ReduxProvider>

@@ -80,15 +80,7 @@ const KYCStatus = () => {
                             </div>
                         </div>
 
-                        {/* Action Buttons */}
-                        <div className="flex flex-col sm:flex-row justify-center gap-4">
-                            <button onClick={() => dispatch(fetchKycStatus())} className="px-6 py-3 bg-primary text-white text-sm font-medium rounded-xl">
-                                Refresh
-                            </button>
-                            <a href="/login" className="px-6 py-3 bg-gray-100 text-gray-800 text-sm font-medium rounded-xl inline-flex items-center justify-center">
-                                Continue to Login Page
-                            </a>
-                        </div>
+
                     </div>
                 </div>
             </div>

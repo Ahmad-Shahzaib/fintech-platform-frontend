@@ -1,6 +1,6 @@
 // In your authSlice.ts file
 import { createSlice, PayloadAction, createAction } from '@reduxjs/toolkit';
-import { registerUser, loginUser } from '../thunk/authThunk';
+import { registerUser, loginUser, resendVerification } from '../thunk/authThunk';
 import { User } from '../../types/auth';
 
 interface AuthState {
@@ -8,6 +8,10 @@ interface AuthState {
   token: string | null;
   isLoading: boolean;
   error: string | null;
+  // resend verification state
+  resendLoading: boolean;
+  resendError: string | null;
+  resendMessage: string | null;
 }
 
 const initialState: AuthState = {
@@ -15,6 +19,9 @@ const initialState: AuthState = {
   token: null,
   isLoading: false,
   error: null,
+  resendLoading: false,
+  resendError: null,
+  resendMessage: null,
 };
 
 export const registerUserPending = createAction('auth/registerUser/pending');
@@ -63,6 +70,23 @@ const authSlice = createSlice({
       .addCase(loginUser.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
+      });
+
+    // Resend verification cases
+    builder
+      .addCase(resendVerification.pending, (state) => {
+        state.resendLoading = true;
+        state.resendError = null;
+        state.resendMessage = null;
+      })
+      .addCase(resendVerification.fulfilled, (state, action: PayloadAction<any>) => {
+        state.resendLoading = false;
+        state.resendMessage = action.payload as string;
+        state.resendError = null;
+      })
+      .addCase(resendVerification.rejected, (state, action) => {
+        state.resendLoading = false;
+        state.resendError = (action.payload as string) || 'Failed to resend verification';
       });
   },
 });

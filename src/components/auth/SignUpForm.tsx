@@ -26,6 +26,7 @@ export default function SignUpForm() {
   // New state for verification modal
   const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [countdown, setCountdown] = useState(10);
+  const [validationErrors, setValidationErrors] = useState<{ [key: string]: string }>({});
 
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
@@ -48,7 +49,34 @@ export default function SignUpForm() {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value })); // Fixed: [name]: value instead of [name: value]
 
+    // Clear specific validation error for the field being edited
+    setValidationErrors(prev => {
+      if (!prev || !prev[name]) return prev;
+      const copy = { ...prev };
+      delete copy[name];
+      return copy;
+    });
+
     if (error) dispatch(clearError());
+  };
+
+  const validateForm = () => {
+    const errors: { [key: string]: string } = {};
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!formData.email || !emailRegex.test(formData.email)) {
+      errors.email = 'Please enter a valid email address';
+    }
+
+    if (!formData.password || formData.password.length < 8) {
+      errors.password = 'Password must be at least 8 characters';
+    }
+
+    if (formData.password !== formData.password_confirmation) {
+      errors.password_confirmation = 'Passwords do not match';
+    }
+
+    return errors;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -56,6 +84,13 @@ export default function SignUpForm() {
 
     if (!isChecked) {
       alert('Please accept the terms and conditions');
+      return;
+    }
+
+    // Client-side validation
+    const errors = validateForm();
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
       return;
     }
 
@@ -166,13 +201,13 @@ export default function SignUpForm() {
             </div> */}
             <div className="relative py-3 sm:py-5">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-200 dark:border-gray-800"></div>
+                {/* <div className="w-full border-t border-gray-200 dark:border-gray-800"></div> */}
               </div>
-              <div className="relative flex justify-center text-sm">
+              {/* <div className="relative flex justify-center text-sm">
                 <span className="p-2 text-gray-400 bg-white dark:bg-gray-900 sm:px-5 sm:py-2">
                   Or
                 </span>
-              </div>
+              </div> */}
             </div>
             <form onSubmit={handleSubmit}>
               <div className="space-y-5">
@@ -219,6 +254,9 @@ export default function SignUpForm() {
                     placeholder="Enter your email"
                     required
                   />
+                  {validationErrors.email && (
+                    <p className="mt-2 text-sm text-red-600">{validationErrors.email}</p>
+                  )}
                 </div>
                 <div>
                   <Label>
@@ -234,6 +272,9 @@ export default function SignUpForm() {
                       onChange={handleChange}
                       required
                     />
+                    {validationErrors.password && (
+                      <p className="mt-2 text-sm text-red-600">{validationErrors.password}</p>
+                    )}
                     <span
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute z-30 -translate-y-1/2 cursor-pointer right-4 top-1/2"
@@ -260,6 +301,9 @@ export default function SignUpForm() {
                       onChange={handleChange}
                       required
                     />
+                    {validationErrors.password_confirmation && (
+                      <p className="mt-2 text-sm text-red-600">{validationErrors.password_confirmation}</p>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-3">

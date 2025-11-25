@@ -64,7 +64,7 @@ export default function UserSidebar() {
       name: "KYC",
       path: "/kyc-form",
       subItems: [
-        { name: "Submit KYC", path: "/kyc-form" },
+        // { name: "Submit KYC", path: "/kyc-form" },
         { name: "KYC Status", path: "/kyc-status" },
       ],
 

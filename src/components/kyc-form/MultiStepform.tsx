@@ -1095,13 +1095,7 @@ export default function MultiStepForm() {
                     </button>
                   )}
 
-                  {formData.verificationStatus === 'approved' && (
-                    <button
-                      onClick={() => router.push('/signin')}
-                      className="px-6 py-3 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 transition-colors">
-                      Continue to Login Page
-                    </button>
-                  )}
+
                 </div>
               </div>
             </div>
