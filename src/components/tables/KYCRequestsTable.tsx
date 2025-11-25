@@ -128,7 +128,7 @@ export function KYCRequestsTable() {
     if (adminLoading) {
         return (
             <div className="flex justify-center items-center h-64">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary dark:border-primary/70"></div>
             </div>
         )
     }
@@ -137,7 +137,7 @@ export function KYCRequestsTable() {
         <div className="space-y-6 w-full max-w-6xl">
             {/* Stats Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                <Card className="p-4 bg-card border border-border hover:border-primary/30 transition-colors">
+                <Card className="p-4 bg-card dark:bg-gray-800 dark:border-gray-700 border border-border hover:border-primary/30 transition-colors">
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm text-muted-foreground mb-1">Total Requests</p>
@@ -148,7 +148,7 @@ export function KYCRequestsTable() {
                         </div>
                     </div>
                 </Card>
-                <Card className="p-4 bg-card border border-border hover:border-yellow-300/30 transition-colors">
+                <Card className="p-4 bg-card dark:bg-gray-800 dark:border-gray-700 border border-border hover:border-yellow-300/30 transition-colors">
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm text-muted-foreground mb-1">Pending</p>
@@ -159,7 +159,7 @@ export function KYCRequestsTable() {
                         </div>
                     </div>
                 </Card>
-                <Card className="p-4 bg-card border border-border hover:border-green-300/30 transition-colors">
+                <Card className="p-4 bg-card dark:bg-gray-800 dark:border-gray-700 border border-border hover:border-green-300/30 transition-colors">
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm text-muted-foreground mb-1">Approved</p>
@@ -170,7 +170,7 @@ export function KYCRequestsTable() {
                         </div>
                     </div>
                 </Card>
-                <Card className="p-4 bg-card border border-border hover:border-red-300/30 transition-colors">
+                <Card className="p-4 bg-card dark:bg-gray-800 dark:border-gray-700 border border-border hover:border-red-300/30 transition-colors">
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm text-muted-foreground mb-1">Rejected</p>
@@ -184,7 +184,7 @@ export function KYCRequestsTable() {
             </div>
 
             {/* Filters and Search */}
-            <Card className="p-4 bg-card border border-border">
+            <Card className="p-4 bg-card dark:bg-gray-800 dark:border-gray-700 border border-border">
                 <div className="flex flex-col md:flex-row gap-4 flex-wrap items-center">
                     <div className="flex-1">
                         <div className="relative">
@@ -238,7 +238,7 @@ export function KYCRequestsTable() {
             <div className="md:hidden space-y-3">
                 {filteredRequests.length > 0 ? (
                     filteredRequests.map((request) => (
-                        <Card key={request.id} className="p-4 bg-card border border-border">
+                        <Card key={request.id} className="p-4 bg-card dark:bg-gray-800 dark:border-gray-700 border border-border">
                             <div className="flex justify-between items-start">
                                 <div className="flex-1">
                                     <p className="text-sm font-mono text-primary font-medium">{request.id}</p>
@@ -288,11 +288,11 @@ export function KYCRequestsTable() {
             </div>
 
             {/* Desktop Table */}
-            <Card className="bg-card border border-border overflow-hidden hidden md:block">
+            <Card className="bg-card dark:bg-gray-800 dark:border-gray-700 border border-border overflow-hidden hidden md:block">
                 <div className="overflow-x-auto">
                     <table className="w-full">
                         <thead>
-                            <tr className="border-b border-border bg-muted/50">
+                            <tr className="border-b border-border bg-muted/50 dark:bg-muted/30">
                                 <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Request ID</th>
                                 <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Name</th>
                                 <th className="px-6 py-4 text-left text-sm font-semibold text-foreground hidden lg:table-cell">Email</th>

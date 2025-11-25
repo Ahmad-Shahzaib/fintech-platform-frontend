@@ -69,13 +69,13 @@ export default function KYCPage() {
     return (
         <>
             {/* Main Table */}
-            <div className="min-h-screen bg-gray-50 p-6">
+            <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
                 <div className="max-w-6xl mx-auto">
-                    <h1 className="text-2xl font-bold text-gray-800 mb-6">KYC Verifications</h1>
+                    <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">KYC Verifications</h1>
 
-                    <div className="bg-white rounded-lg shadow overflow-hidden">
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
                         <table className="w-full text-sm">
-                            <thead className="bg-gray-100 text-gray-600 font-medium uppercase text-xs">
+                            <thead className="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 font-medium uppercase text-xs">
                                 <tr>
                                     <th className="px-5 py-3 text-left">Name</th>
                                     <th className="px-5 py-3 text-left">Email</th>
@@ -84,12 +84,12 @@ export default function KYCPage() {
                                     <th className="px-5 py-3 text-center">Action</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-200">
+                            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                                 {pendingList.map((kyc: AdminPendingKycItem) => (
-                                    <tr key={kyc.id} className="hover:bg-gray-50">
-                                        <td className="px-5 py-4 font-medium">{kyc.full_name}</td>
-                                        <td className="px-5 py-4 text-gray-600">{kyc.user?.email}</td>
-                                        <td className="px-5 py-4 capitalize">{(kyc.document_type || '').replace("_", " ")}</td>
+                                    <tr key={kyc.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                                        <td className="px-5 py-4 font-medium text-gray-900 dark:text-gray-100">{kyc.full_name}</td>
+                                        <td className="px-5 py-4 text-gray-600 dark:text-gray-300">{kyc.user?.email}</td>
+                                        <td className="px-5 py-4 capitalize text-gray-900 dark:text-gray-100">{(kyc.document_type || '').replace("_", " ")}</td>
                                         <td className="px-5 py-4">{getStatus(kyc.status)}</td>
                                         <td className="px-5 py-4 text-center">
                                             <button
@@ -151,60 +151,60 @@ export default function KYCPage() {
             {/* Beautiful Compact Modal */}
             {selected && (
                 <div className="fixed inset-0  z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-y-auto">
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-y-auto">
                         {/* Header */}
-                        <div className="flex justify-between items-center p-6 border-b">
+                        <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
                             <div>
-                                <h2 className="text-xl font-bold text-gray-800">KYC Details</h2>
-                                <p className="text-sm text-gray-500">ID: {selected.id} • {getStatus(selected.status)}</p>
+                                <h2 className="text-xl font-bold text-gray-800 dark:text-white">KYC Details</h2>
+                                <p className="text-sm text-gray-500 dark:text-gray-300">ID: {selected.id} • {getStatus(selected.status)}</p>
                             </div>
                             <button
                                 onClick={() => setSelected(null)}
-                                className="p-2 hover:bg-gray-100 rounded-full transition"
+                                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition"
                             >
                                 <X size={22} />
                             </button>
                         </div>
 
-                        <div className="p-6 space-y-6">
+                        <div className="p-6 space-y-6 text-gray-900 dark:text-gray-100">
                             {detailLoading ? (
                                 <div className="py-10 text-center">
-                                    <div className="text-sm text-gray-500">Loading details...</div>
+                                    <div className="text-sm text-gray-500 dark:text-gray-300">Loading details...</div>
                                 </div>
                             ) : (
                                 <>
                                     {/* Personal Info */}
                                     <div className="grid grid-cols-2 gap-4 text-sm">
                                         <div>
-                                            <span className="font-medium text-gray-600">Name:</span>
+                                            <span className="font-medium text-gray-600 dark:text-gray-300">Name:</span>
                                             <p className="mt-1 font-semibold">{selected.full_name}</p>
                                         </div>
                                         <div>
-                                            <span className="font-medium text-gray-600">Email:</span>
+                                            <span className="font-medium text-gray-600 dark:text-gray-300">Email:</span>
                                             <p className="mt-1">{selected.user.email}</p>
                                         </div>
                                         <div>
-                                            <span className="font-medium text-gray-600">DOB:</span>
+                                            <span className="font-medium text-gray-600 dark:text-gray-300">DOB:</span>
                                             <p className="mt-1">{formatDate(selected.date_of_birth)}</p>
                                         </div>
                                         <div>
-                                            <span className="font-medium text-gray-600">Phone:</span>
+                                            <span className="font-medium text-gray-600 dark:text-gray-300">Phone:</span>
                                             <p className="mt-1">{selected.phone_number}</p>
                                         </div>
                                         <div className="col-span-2">
-                                            <span className="font-medium text-gray-600">Address:</span>
+                                            <span className="font-medium text-gray-600 dark:text-gray-300">Address:</span>
                                             <p className="mt-1">{selected.address}, {selected.city} {selected.postal_code}, Australia</p>
                                         </div>
                                     </div>
 
-                                    <div className="border-t pt-4">
+                                    <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
                                         <div className="grid grid-cols-2 gap-4 text-sm">
                                             <div>
-                                                <span className="font-medium text-gray-600">Document Type:</span>
+                                                <span className="font-medium text-gray-600 dark:text-gray-300">Document Type:</span>
                                                 <p className="mt-1 uppercase">{selected.document_type.replace("_", " ")}</p>
                                             </div>
                                             <div>
-                                                <span className="font-medium text-gray-600">Document No:</span>
+                                                <span className="font-medium text-gray-600 dark:text-gray-300">Document No:</span>
                                                 <p className="mt-1 font-mono">{selected.document_number}</p>
                                             </div>
                                         </div>
@@ -212,7 +212,7 @@ export default function KYCPage() {
 
                                     {/* Images - Compact Grid */}
                                     <div>
-                                        <h3 className="font-semibold text-gray-700 mb-3">Verification Images</h3>
+                                        <h3 className="font-semibold text-gray-700 dark:text-gray-200 mb-3">Verification Images</h3>
                                         <div className="grid grid-cols-3 gap-4">
                                             {[
                                                 { url: selected.document_front_url, label: "Front" },
@@ -221,18 +221,26 @@ export default function KYCPage() {
                                             ].map((img) => (
                                                 <div
                                                     key={img.label}
-                                                    onClick={() => window.open(img.url, "_blank")}
+                                                    onClick={() => img.url && window.open(img.url, "_blank")}
                                                     className="group relative rounded-lg overflow-hidden shadow hover:shadow-lg cursor-pointer transition"
                                                 >
-                                                    <Image
-                                                        src={img.url}
-                                                        alt={img.label}
-                                                        width={300}
-                                                        height={200}
-                                                        className="w-full h-48 object-cover group-hover:scale-105 transition"
-                                                    />
+                                                    {img.url ? (
+                                                        <Image
+                                                            src={img.url}
+                                                            alt={img.label}
+                                                            width={300}
+                                                            height={200}
+                                                            unoptimized
+                                                            className="w-full h-48 object-cover group-hover:scale-105 transition"
+                                                        />
+                                                    ) : (
+                                                        <div className="w-full h-48 bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
+                                                            <span className="text-xs text-gray-500">No image</span>
+                                                        </div>
+                                                    )}
+
                                                     <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition flex items-center justify-center">
-                                                        <ExternalLink className="text-white opacity-0 group-hover:opacity-100" size={32} />
+                                                        {img.url && <ExternalLink className="text-white opacity-0 group-hover:opacity-100" size={32} />}
                                                     </div>
                                                     <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2">
                                                         <p className="text-white text-xs font-medium text-center">{img.label}</p>
@@ -243,7 +251,7 @@ export default function KYCPage() {
                                     </div>
 
                                     {/* Footer Info */}
-                                    <div className="border-t pt-4 text-xs text-gray-500 space-y-1">
+                                    <div className="border-t border-gray-200 dark:border-gray-700 pt-4 text-xs text-gray-500 dark:text-gray-300 space-y-1">
                                         <div className="flex justify-between">
                                             <span>Submitted:</span>
                                             <span>{formatDate(selected.submitted_at)}</span>

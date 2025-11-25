@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { useAuth } from '@/context/AuthContext';
+import { UserRole } from '@/types/auth';
 import MultiStepForm from './MultiStepform';
 import { RootState } from '@/redux/store';
 
@@ -13,7 +14,7 @@ export default function KycModalLauncher() {
 
     const [show, setShow] = useState(false);
 
-    const { isAuthenticated, isLoading: authLoading } = useAuth();
+    const { isAuthenticated, isLoading: authLoading, user } = useAuth();
 
     // Initialize from sessionStorage: only show if flag is set, auth is ready and user is authenticated, and KYC not submitted
     useEffect(() => {
@@ -22,7 +23,8 @@ export default function KycModalLauncher() {
             // Wait until auth check finishes
             if (authLoading) return;
             const flag = sessionStorage.getItem('kyc_modal');
-            if (flag && isAuthenticated && !isSubmitted) {
+            // Show only for authenticated regular users (not admins)
+            if (flag && isAuthenticated && !isSubmitted && user?.role === UserRole.USER) {
                 setShow(true);
             } else {
                 setShow(false);
