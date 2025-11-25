@@ -39,14 +39,8 @@ export const registerUser = createAsyncThunk(
       const user = respData?.user ?? response.data?.user ?? null;
 
       if (response.data?.success || user) {
-        // Persist token (if provided) for later requests
-        if (token) {
-          try {
-            localStorage.setItem('auth_token', token);
-          } catch (e) {
-            // ignore localStorage errors
-          }
-        }
+        // Do NOT persist token here for registration flow.
+        // We want users to verify their email first and then sign in.
 
         // Return both user and token — this becomes `action.payload` in fulfilled
         return { user, token };
@@ -80,17 +74,19 @@ export const loginUser = createAsyncThunk(
       // Normalize user shape so the rest of the app receives consistent role string
       const user = userPayload
         ? {
-            id: String(userPayload.id),
-            email: userPayload.email,
-            name: userPayload.name,
-            role:
-              typeof userPayload.role === 'string' && (userPayload.role === 'admin' || userPayload.role === 'user')
-                ? userPayload.role
-                : typeof userPayload.role_id === 'number' && userPayload.role_id === 1
+          id: String(userPayload.id),
+          email: userPayload.email,
+          name: userPayload.name,
+          // include email_verified so UI can check it before allowing login
+          email_verified: userPayload.email_verified ?? userPayload.emailVerified ?? false,
+          role:
+            typeof userPayload.role === 'string' && (userPayload.role === 'admin' || userPayload.role === 'user')
+              ? userPayload.role
+              : typeof userPayload.role_id === 'number' && userPayload.role_id === 1
                 ? 'admin'
                 : 'user',
-            avatar: userPayload.avatar ?? userPayload.user?.avatar,
-          }
+          avatar: userPayload.avatar ?? userPayload.user?.avatar,
+        }
         : null;
 
       if (!token || !user) {

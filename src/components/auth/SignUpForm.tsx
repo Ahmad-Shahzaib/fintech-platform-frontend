@@ -1,5 +1,5 @@
 "use client";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useRouter } from 'next/navigation';
 import Checkbox from "@/components/form/input/Checkbox";
@@ -10,7 +10,6 @@ import Link from "next/link";
 import { registerUser } from '@/redux/thunk/authThunk';
 import { AppDispatch } from '@/redux/store';
 import type { RootState } from '@/redux/rootReducer';
-
 import { clearError } from '@/redux/slice/authSlice';
 
 export default function SignUpForm() {
@@ -24,19 +23,34 @@ export default function SignUpForm() {
     phone: '',
   });
 
+  // New state for verification modal
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [countdown, setCountdown] = useState(10);
+
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
   const { isLoading, error } = useSelector((state: RootState) => state.auth);
 
+  // Prevent body scrolling when modal is open
+  useEffect(() => {
+    if (showVerificationModal) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [showVerificationModal]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => ({ ...prev, [name]: value })); // Fixed: [name]: value instead of [name: value]
 
-    // Clear error when user starts typing
     if (error) dispatch(clearError());
   };
 
-  // --- MODIFIED SECTION ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -45,32 +59,79 @@ export default function SignUpForm() {
       return;
     }
 
-    // Dispatch the thunk and wait for it to complete.
     const result = await dispatch(registerUser(formData));
 
-    // Use the match helper to detect fulfilled vs rejected
     if (registerUser.fulfilled.match(result)) {
-      const token = result.payload?.token ?? null;
-      console.log('✅ Registration successful. Token:', token);
-      try {
-        // expose a temporary global variable for quick inspection in console
-        (window as any).__AUTH_TOKEN = token;
-      } catch (e) {
-        // ignore
-      }
-      router.push('/kyc-form'); // Redirect to KYC form on success
+      // Show verification modal instead of redirecting
+      setShowVerificationModal(true);
+
+      // Start countdown timer
+      const timer = setInterval(() => {
+        setCountdown(prev => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            router.push('/signin');
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
     } else {
       const err = result.payload ?? (result as any).error?.message ?? 'Registration failed';
       console.log('❌ Registration failed:', err);
     }
   };
-  // --- END OF MODIFIED SECTION ---
+
+  // Close modal when countdown finishes
+  useEffect(() => {
+    if (countdown === 0) {
+      setShowVerificationModal(false);
+    }
+  }, [countdown]);
 
   return (
     <div className="flex flex-col flex-1 lg:w-1/2 w-full overflow-y-auto no-scrollbar">
-      <div className="w-full max-w-md sm:pt-10 mx-auto mb-5">
+      {/* Verification Modal */}
+      {showVerificationModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center  bg-opacity-50">
+          <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4 transform transition-all duration-300 scale-100 animate-fade-in">
+            <div className="text-center">
+              <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100">
+                <svg className="h-10 w-10 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mt-4">Verify Your Email</h3>
+              <p className="mt-2 text-gray-600">
+                We've sent a verification link to <span className="font-semibold">{formData.email}</span>
+              </p>
+              <p className="mt-4 text-gray-500">
+                Please check your inbox and click the link to activate your account.
+              </p>
+              <div className="mt-6">
+                <div className="inline-flex items-center px-4 py-2 bg-blue-50 rounded-full">
+                  <span className="text-blue-700 font-medium">
+                    Redirecting to sign-in in {countdown}s
+                  </span>
+                </div>
+              </div>
+              <div className="mt-6">
+                <button
+                  onClick={() => {
+                    setShowVerificationModal(false);
+                    router.push('/signin');
+                  }}
+                  className="text-blue-600 hover:text-blue-800 font-medium"
+                >
+                  Go to Sign In Now
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
-      </div>
+      <div className="w-full max-w-md sm:pt-10 mx-auto mb-5"></div>
       <div className="flex flex-col justify-center flex-1 w-full max-w-md mx-auto">
         <div>
           <div className="mb-5 sm:mb-8">
@@ -91,26 +152,13 @@ export default function SignUpForm() {
           <div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-5">
               <button className="inline-flex items-center justify-center gap-3 py-3 text-sm font-normal text-gray-700 transition-colors bg-gray-100 rounded-lg px-7 hover:bg-gray-200 hover:text-gray-800 dark:bg-white/5 dark:text-white/90 dark:hover:bg-white/10">
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 20 20"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                   {/* Google SVG path */}
                 </svg>
                 Sign up with Google
               </button>
               <button className="inline-flex items-center justify-center gap-3 py-3 text-sm font-normal text-gray-700 transition-colors bg-gray-100 rounded-lg px-7 hover:bg-gray-200 hover:text-gray-800 dark:bg-white/5 dark:text-white/90 dark:hover:bg-white/10">
-                <svg
-                  width="21"
-                  className="fill-current"
-                  height="20"
-                  viewBox="0 0 21 20"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
+                <svg width="21" className="fill-current" height="20" viewBox="0 0 21 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                   {/* X SVG path */}
                 </svg>
                 Sign up with X
@@ -129,7 +177,6 @@ export default function SignUpForm() {
             <form onSubmit={handleSubmit}>
               <div className="space-y-5">
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                  {/* <!-- First Name --> */}
                   <div className="sm:col-span-1">
                     <Label>
                       First Name<span className="text-error-500">*</span>
@@ -144,7 +191,6 @@ export default function SignUpForm() {
                       required
                     />
                   </div>
-                  {/* <!-- Last Name --> */}
                   <div className="sm:col-span-1">
                     <Label>
                       Phone<span className="text-error-500">*</span>
@@ -160,7 +206,6 @@ export default function SignUpForm() {
                     />
                   </div>
                 </div>
-                {/* <!-- Email --> */}
                 <div>
                   <Label>
                     Email<span className="text-error-500">*</span>
@@ -175,7 +220,6 @@ export default function SignUpForm() {
                     required
                   />
                 </div>
-                {/* <!-- Password --> */}
                 <div>
                   <Label>
                     Password<span className="text-error-500">*</span>
@@ -202,7 +246,6 @@ export default function SignUpForm() {
                     </span>
                   </div>
                 </div>
-                {/* <!-- Confirm Password --> */}
                 <div>
                   <Label>
                     Confirm Password<span className="text-error-500">*</span>
@@ -219,7 +262,6 @@ export default function SignUpForm() {
                     />
                   </div>
                 </div>
-                {/* <!-- Checkbox --> */}
                 <div className="flex items-center gap-3">
                   <Checkbox
                     className="w-5 h-5"
@@ -237,7 +279,6 @@ export default function SignUpForm() {
                     </span>
                   </p>
                 </div>
-                {/* <!-- Button --> */}
                 <div>
                   <button
                     type="submit"

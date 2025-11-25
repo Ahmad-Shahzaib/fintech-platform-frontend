@@ -22,25 +22,65 @@ export default function SignInForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+  const [resendMessage, setResendMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
   const { checkAuth } = useAuth();
 
-  // --- MODIFIED SECTION ---
-  // In your SignInForm component
+  const handleResendVerification = async () => {
+    if (!email) {
+      setResendMessage({ type: 'error', message: 'Please enter your email address' });
+      return;
+    }
+
+    setIsResending(true);
+    setResendMessage(null);
+
+    try {
+      // Replace with your actual API call to resend verification email
+      const response = await fetch('/api/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setResendMessage({
+          type: 'success',
+          message: 'Verification email resent successfully! Please check your inbox.'
+        });
+      } else {
+        setResendMessage({
+          type: 'error',
+          message: data.message || 'Failed to resend verification email'
+        });
+      }
+    } catch (error) {
+      setResendMessage({
+        type: 'error',
+        message: 'An error occurred while resending verification email'
+      });
+    } finally {
+      setIsResending(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
+    setResendMessage(null);
+
     try {
       console.log("Dispatching loginUser...");
-      // Let's capture the result to inspect it
       const resultAction = await dispatch(loginUser({ email, password }));
 
       console.log("Thunk Result Action:", resultAction);
 
-      // Check if the action was fulfilled
       if (loginUser.fulfilled.match(resultAction)) {
         console.log("✅ Login was FULFILLED. Payload:", resultAction.payload);
         const token = resultAction.payload?.token ?? null;
@@ -50,14 +90,26 @@ export default function SignInForm() {
         } catch (e) {
           // ignore
         }
-        // If we get here, the thunk succeeded. Update AuthContext to reflect the new login
-        // (the login thunk writes localStorage so checkAuth will pick it up and redirect based on role)
-        // Update the AuthContext state from localStorage
+
+        // Check if email is verified
+        const user = (resultAction.payload as any)?.user;
+        console.log("User object:", user);
+        console.log("Email verified status:", user?.email_verified);
+
+        // Explicitly check if email_verified is false (not just falsy)
+        if (user?.email_verified === false) {
+          console.log("Email is not verified, showing error");
+          setError("Please verify your email before logging in. Check your inbox for the verification link.");
+          setIsLoading(false);
+          return;
+        }
+
+        // If email is verified, proceed with authentication
+        console.log("Email is verified, proceeding with login");
         try { checkAuth(); } catch (e) { /* ignore */ }
 
         // Determine routing based on role returned from the thunk, if available
-        const payloadUser = (resultAction.payload as any)?.user;
-        const roleFromPayload = payloadUser?.role ?? payloadUser?.role_id;
+        const roleFromPayload = user?.role ?? user?.role_id;
         if (typeof roleFromPayload === 'string') {
           if (roleFromPayload === 'admin') router.push('/');
           else router.push('/dashboard');
@@ -89,7 +141,6 @@ export default function SignInForm() {
       setIsLoading(false);
     }
   };
-  // --- END OF MODIFIED SECTION ---
 
   // Clear error when user starts typing
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -172,8 +223,32 @@ export default function SignInForm() {
             <form onSubmit={handleSubmit}>
               <div className="space-y-6">
                 {error && (
-                  <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg dark:bg-red-900/20 dark:border-red-800 dark:text-red-400">
+                  <div className={`p-3 text-sm rounded-lg border ${error.includes("verify your email")
+                    ? "text-yellow-600 bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800 dark:text-yellow-400"
+                    : "text-red-600 bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400"
+                    }`}>
                     {error}
+                    {error.includes("verify your email") && (
+                      <div className="mt-3">
+                        <button
+                          type="button"
+                          onClick={handleResendVerification}
+                          disabled={isResending}
+                          className="text-sm font-medium text-yellow-700 hover:text-yellow-800 dark:text-yellow-300 dark:hover:text-yellow-200 disabled:opacity-50"
+                        >
+                          {isResending ? "Sending..." : "Resend verification email"}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {resendMessage && (
+                  <div className={`p-3 text-sm rounded-lg border ${resendMessage.type === 'success'
+                    ? "text-green-600 bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400"
+                    : "text-red-600 bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400"
+                    }`}>
+                    {resendMessage.message}
                   </div>
                 )}
 
