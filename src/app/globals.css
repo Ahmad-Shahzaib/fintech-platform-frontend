@@ -869,3 +869,10 @@ span.flatpickr-weekday,
     @apply bg-background text-foreground;
   }
 }
+
+/*  overflow hidden */
+.overflow-hidden {
+  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: hidden;
+}

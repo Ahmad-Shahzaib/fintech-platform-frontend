@@ -33,6 +33,12 @@ type DocumentFiles = {
   selfie: File | null;
 };
 
+type DocumentPreviews = {
+  front: string | null;
+  back: string | null;
+  selfie: string | null;
+};
+
 type FormDataType = {
   fullName: string;
   dateOfBirth: string;
@@ -94,6 +100,13 @@ export default function MultiStepForm() {
     verificationStatus: 'pending'
   });
 
+  // New state for document previews
+  const [previews, setPreviews] = useState<DocumentPreviews>({
+    front: null,
+    back: null,
+    selfie: null
+  });
+
   const [clientError, setClientError] = useState<string | null>(null);
 
   // Handle form submission using Redux thunk
@@ -149,14 +162,19 @@ export default function MultiStepForm() {
     }
   }, [isSubmitted, submissionData]);
 
-  // Clean up camera stream when component unmounts
+  // Clean up camera stream and preview URLs when component unmounts
   useEffect(() => {
     return () => {
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
       }
+
+      // Revoke all preview URLs to avoid memory leaks
+      Object.values(previews).forEach(preview => {
+        if (preview) URL.revokeObjectURL(preview);
+      });
     };
-  }, [stream]);
+  }, [stream, previews]);
 
   // Effect to handle video element when stream changes
   useEffect(() => {
@@ -208,12 +226,20 @@ export default function MultiStepForm() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, docType: keyof DocumentFiles) => {
     const file = e.target.files?.[0] ?? null;
     if (file) {
+      // Create a preview URL
+      const previewUrl = URL.createObjectURL(file);
+
       setFormData(prev => ({
         ...prev,
         documents: {
           ...prev.documents,
           [docType]: file
         }
+      }));
+
+      setPreviews(prev => ({
+        ...prev,
+        [docType]: previewUrl
       }));
     }
   };
@@ -293,6 +319,8 @@ export default function MultiStepForm() {
           return;
         }
         const file = new File([blob], "selfie.jpg", { type: "image/jpeg" });
+        const previewUrl = URL.createObjectURL(file);
+
         setFormData(prev => ({
           ...prev,
           documents: {
@@ -300,6 +328,12 @@ export default function MultiStepForm() {
             selfie: file
           }
         }));
+
+        setPreviews(prev => ({
+          ...prev,
+          selfie: previewUrl
+        }));
+
         closeCamera();
       }, "image/jpeg", 0.9);
     } else {
@@ -310,32 +344,6 @@ export default function MultiStepForm() {
   return (
     <div className=" flex items-center justify-center min-h-screen p-4">
       <div className="w-full max-w-5xl bg-white rounded-3xl shadow-sm overflow-hidden">
-        {/* Header */}
-        <div className="bg-white border-b border-gray-100 p-4 md:p-6 flex justify-between items-center">
-          <div className="flex items-center space-x-2">
-
-            <div>
-              <Link href="/">
-                <Image
-                  width={154}
-                  height={32}
-                  className="dark:hidden"
-                  src="/images/logo/auth-logo12.png"
-                  alt="Logo"
-                />
-                <Image
-                  width={154}
-                  height={32}
-                  className="hidden dark:block"
-                  src="/images/logo/auth-logo12.png"
-                  alt="Logo"
-                />
-              </Link>
-              <span className="ml-2 text-xs font-medium text-gray-400 bg-gray-100 px-2 py-1 rounded">KYC</span>
-            </div>
-          </div>
-
-        </div>
 
         {/* Progress Bar */}
         <div className="px-4 md:px-6 pt-6 md:pt-8 pb-4">
@@ -546,14 +554,24 @@ export default function MultiStepForm() {
                     <div>
                       <label className="block cursor-pointer">
                         <div className={`aspect-5/3 bg-gray-50 rounded-2xl flex flex-col items-center justify-center border-2 border-dashed transition-all hover:bg-gray-100 ${formData.documents.front ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}>
-                          {formData.documents.front ? (
-                            <svg className="w-8 h-8 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
+                          {previews.front ? (
+                            <div className="relative w-full h-full">
+                              <img
+                                src={previews.front}
+                                alt="Front document preview"
+                                className="w-full h-full object-cover rounded-xl"
+                              />
+                              <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                                <span className="text-white text-sm font-medium">Change Document</span>
+                              </div>
+                            </div>
                           ) : (
-                            <svg className="w-8 h-8 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                            </svg>
+                            <>
+                              <svg className="w-8 h-8 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                              </svg>
+                              <span className="text-xs text-gray-500 mt-2">Upload Front Side</span>
+                            </>
                           )}
                         </div>
                         <input
@@ -570,14 +588,24 @@ export default function MultiStepForm() {
                       <div>
                         <label className="block cursor-pointer">
                           <div className={`aspect-5/3 bg-gray-50 rounded-2xl flex flex-col items-center justify-center border-2 border-dashed transition-all hover:bg-gray-100 ${formData.documents.back ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}>
-                            {formData.documents.back ? (
-                              <svg className="w-8 h-8 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                              </svg>
+                            {previews.back ? (
+                              <div className="relative w-full h-full">
+                                <img
+                                  src={previews.back}
+                                  alt="Back document preview"
+                                  className="w-full h-full object-cover rounded-xl"
+                                />
+                                <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                                  <span className="text-white text-sm font-medium">Change Document</span>
+                                </div>
+                              </div>
                             ) : (
-                              <svg className="w-8 h-8 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                              </svg>
+                              <>
+                                <svg className="w-8 h-8 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                </svg>
+                                <span className="text-xs text-gray-500 mt-2">Upload Back Side</span>
+                              </>
                             )}
                           </div>
                           <input
@@ -707,15 +735,12 @@ export default function MultiStepForm() {
                 ) : (
                   <div className="text-center mb-8">
                     <div className="w-32 h-32 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-6 overflow-hidden">
-                      {formData.documents.selfie ? (
-                        <>
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={URL.createObjectURL(formData.documents.selfie)}
-                            alt="Selfie preview"
-                            className="w-full h-full object-cover"
-                          />
-                        </>
+                      {previews.selfie ? (
+                        <img
+                          src={previews.selfie}
+                          alt="Selfie preview"
+                          className="w-full h-full object-cover"
+                        />
                       ) : (
                         <svg className="w-16 h-16 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -754,7 +779,7 @@ export default function MultiStepForm() {
                     ) : (
                       <label className="block cursor-pointer">
                         <div className="inline-block px-6 py-3 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 transition-colors">
-                          {formData.documents.selfie ? 'Change Selfie' : 'Choose File'}
+                          {previews.selfie ? 'Change Selfie' : 'Choose File'}
                         </div>
                         <input
                           type="file"
@@ -766,7 +791,7 @@ export default function MultiStepForm() {
                     )}
 
                     <p className="text-xs text-gray-500 mt-4">
-                      {formData.documents.selfie
+                      {previews.selfie
                         ? 'Selfie uploaded successfully'
                         : selfieMethod === 'camera'
                           ? 'Please take a clear selfie with good lighting'
@@ -941,6 +966,62 @@ export default function MultiStepForm() {
                         </div>
                       </div>
                     </div>
+
+                    {/* Document previews */}
+                    <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <p className="text-xs text-gray-500 mb-2">Front Document</p>
+                        {previews.front ? (
+                          <div className="aspect-5/3 rounded-xl overflow-hidden border border-gray-200">
+                            <img
+                              src={previews.front}
+                              alt="Front document preview"
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        ) : (
+                          <div className="aspect-5/3 bg-gray-100 rounded-xl flex items-center justify-center border border-gray-200">
+                            <span className="text-xs text-gray-400">Not uploaded</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {formData.documentType !== 'passport' && (
+                        <div>
+                          <p className="text-xs text-gray-500 mb-2">Back Document</p>
+                          {previews.back ? (
+                            <div className="aspect-5/3 rounded-xl overflow-hidden border border-gray-200">
+                              <img
+                                src={previews.back}
+                                alt="Back document preview"
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          ) : (
+                            <div className="aspect-5/3 bg-gray-100 rounded-xl flex items-center justify-center border border-gray-200">
+                              <span className="text-xs text-gray-400">Not uploaded</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      <div>
+                        <p className="text-xs text-gray-500 mb-2">Selfie</p>
+                        {previews.selfie ? (
+                          <div className="aspect-5/3 rounded-xl overflow-hidden border border-gray-200">
+                            <img
+                              src={previews.selfie}
+                              alt="Selfie preview"
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        ) : (
+                          <div className="aspect-5/3 bg-gray-100 rounded-xl flex items-center justify-center border border-gray-200">
+                            <span className="text-xs text-gray-400">Not uploaded</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
                   <div className="flex items-start">
@@ -959,7 +1040,7 @@ export default function MultiStepForm() {
               </div>
 
               <div className="flex space-x-3">
-                a               <button
+                <button
                   onClick={prevStep}
                   className="flex-1 py-3.5 bg-gray-100 text-gray-600 text-sm font-medium rounded-xl hover:bg-gray-200 transition-colors flex items-center justify-center space-x-2"
                 >
@@ -1094,8 +1175,6 @@ export default function MultiStepForm() {
                       Try Again
                     </button>
                   )}
-
-
                 </div>
               </div>
             </div>

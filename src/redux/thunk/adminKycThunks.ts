@@ -90,11 +90,12 @@ export const approveAdminKyc = createAsyncThunk<
 
 export const rejectAdminKyc = createAsyncThunk<
     any,
-    number,
+    { id: number; rejection_reason?: string },
     { state: RootState }
->('adminKyc/reject', async (kycId, { rejectWithValue }) => {
+>('adminKyc/reject', async (payload, { rejectWithValue }) => {
     try {
-        const response = await api.post(`/admin/kyc/${kycId}/reject`);
+        const { id, rejection_reason } = payload;
+        const response = await api.post(`/admin/kyc/${id}/reject`, { rejection_reason });
         return response.data;
     } catch (error: unknown) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any

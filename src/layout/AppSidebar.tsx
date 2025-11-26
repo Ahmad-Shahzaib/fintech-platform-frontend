@@ -18,6 +18,8 @@ import {
   UserCircleIcon,
 } from "../icons/index";
 import SidebarWidget from "./SidebarWidget";
+import { MagnetIcon } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 type NavItem = {
   name: string;
@@ -31,81 +33,35 @@ const navItems: NavItem[] = [
     icon: <GridIcon />,
     name: "Dashboard",
     path: "/",
-
   },
-  // {
-  //   icon: <CalenderIcon />,
-  //   name: "Top Up Request",
-  //   path: "/top-up",
-  // },
-  // {
-  //   icon: <GridIcon />,
-  //   name: "Kyc",
-  //   path: "/kyc-form",
-  // },
   {
     icon: <UserCircleIcon />,
     name: "Manage User",
     path: "/manage-user",
   },
-
-  // {
-  //   name: "Forms",
-  //   icon: <ListIcon />,
-  //   subItems: [{ name: "Form Elements", path: "/form-elements", pro: false }],
-  // },
   {
-    name: "Kyc Table",
+    icon: <MagnetIcon />,
+    name: "Manage TopUps",
+    subItems: [
+      { name: "All TopUps", path: "/all-topups", pro: false },
+      { name: "Pending TopUps", path: "/manage-topups", pro: false },
+    ],
+  },
+  {
+    name: "Kyc Detail ",
     icon: <TableIcon />,
     subItems: [
       { name: "Kyc Requests", path: "/kyc-table", pro: false },
-      { name: "Kyc Detail", path: "/kyc-detail", pro: false },
     ],
   },
-  // {
-  //   name: "Pages",
-  //   icon: <PageIcon />,
-  //   subItems: [
-  //     { name: "Blank Page", path: "/blank", pro: false },
-  //     { name: "404 Error", path: "/error-404", pro: false },
-  //   ],
-  // },
 ];
 
-const othersItems: NavItem[] = [
-  // {
-  //   icon: <PieChartIcon />,
-  //   name: "Charts",
-  //   subItems: [
-  //     { name: "Line Chart", path: "/line-chart", pro: false },
-  //     { name: "Bar Chart", path: "/bar-chart", pro: false },
-  //   ],
-  // },
-  // {
-  //   icon: <BoxCubeIcon />,
-  //   name: "UI Elements",
-  //   subItems: [
-  //     { name: "Alerts", path: "/alerts", pro: false },
-  //     { name: "Avatar", path: "/avatars", pro: false },
-  //     { name: "Badge", path: "/badge", pro: false },
-  //     { name: "Buttons", path: "/buttons", pro: false },
-  //     { name: "Images", path: "/images", pro: false },
-  //     { name: "Videos", path: "/videos", pro: false },
-  //   ],
-  // },
-  // {
-  //   icon: <PlugInIcon />,
-  //   name: "Authentication",
-  //   subItems: [
-  //     { name: "Sign In", path: "/signin", pro: false },
-  //     { name: "Sign Up", path: "/signup", pro: false },
-  //   ],
-  // },
-];
+const othersItems: NavItem[] = [];
 
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const pathname = usePathname();
+  const router = useRouter();
 
   const renderMenuItems = (
     navItems: NavItem[],
@@ -233,11 +189,9 @@ const AppSidebar: React.FC = () => {
   );
   const subMenuRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  // const isActive = (path: string) => path === pathname;
   const isActive = useCallback((path: string) => path === pathname, [pathname]);
 
   useEffect(() => {
-    // Check if the current path matches any submenu item
     let submenuMatched = false;
     ["main", "others"].forEach((menuType) => {
       const items = menuType === "main" ? navItems : othersItems;
@@ -256,14 +210,12 @@ const AppSidebar: React.FC = () => {
       });
     });
 
-    // If no submenu item matches, close the open submenu
     if (!submenuMatched) {
       setOpenSubmenu(null);
     }
   }, [pathname, isActive]);
 
   useEffect(() => {
-    // Set the height of the submenu items when the submenu is opened
     if (openSubmenu !== null) {
       const key = `${openSubmenu.type}-${openSubmenu.index}`;
       if (subMenuRefs.current[key]) {
@@ -370,7 +322,6 @@ const AppSidebar: React.FC = () => {
             </div>
           </div>
         </nav>
-        {/* {isExpanded || isHovered || isMobileOpen ? <SidebarWidget /> : null} */}
       </div>
     </aside>
   );

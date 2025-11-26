@@ -49,3 +49,15 @@ export const MOCK_USERS: Record<string, { password: string; user: User }> = {
     },
   },
 };
+// In your types file (where TopUpItem is defined)
+export interface TopUpItem {
+  id: string;
+  created_at?: string; // Make optional if it might not exist
+  date?: string;      // Add this property
+  amount_aud?: string;
+  amount?: string | number;
+  currency?: string;
+  coin?: string;
+  network?: string;
+  // ... other properties
+}

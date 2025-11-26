@@ -1,33 +1,18 @@
 "use client";
 import { useState, useEffect, ChangeEvent, FormEvent } from 'react';
-import api from '../../lib/axios';
 import { AxiosError } from 'axios';
+import { useDispatch, useSelector } from 'react-redux';
+import type { AppDispatch, RootState } from '@/redux/store';
+import { createTopUpRequest } from '@/redux/thunk/topUpThunks';
+import { fetchCurrencies } from '@/redux/thunk/currencyThunks';
 
-const COINS = {
-  BTC: { name: 'Bitcoin', networks: ['Bitcoin', 'Lightning Network'], icon: '₿' },
-  ETH: { name: 'Ethereum', networks: ['Ethereum', 'Arbitrum', 'Optimism'], icon: 'Ξ' },
-  USDC: { name: 'USD Coin', networks: ['Ethereum', 'Polygon', 'BSC', 'Solana'], icon: '$' },
-  USDT: { name: 'Tether', networks: ['Ethereum', 'Tron', 'BSC', 'Polygon'], icon: '₮' },
-  BNB: { name: 'BNB', networks: ['BSC', 'Ethereum'], icon: 'B' },
-} as const;
-
-const networkFees = {
-  Bitcoin: 0.0005,
-  'Lightning Network': 0.00001,
-  Ethereum: 0.003,
-  Polygon: 0.1,
-  BSC: 0.0003,
-  Arbitrum: 0.0002,
-  Optimism: 0.0002,
-  Tron: 1,
-  Solana: 0.00025
-} as const;
+// Currency and network lists are loaded dynamically from the API
 
 
 type FormData = {
   amount: string; // raw AUD string input
-  coin: keyof typeof COINS;
-  network: string;
+  currencyId: number | null; // id from API
+  networkId: number | null; // id from API
   walletAddress: string;
   confirmAddress: string;
   acceptDisclaimer: boolean;
@@ -43,8 +28,8 @@ type FeeState = {
 export default function TopUpRequest() {
   const [formData, setFormData] = useState<FormData>({
     amount: '',
-    coin: 'BTC',
-    network: 'Bitcoin',
+    currencyId: null,
+    networkId: null,
     walletAddress: '',
     confirmAddress: '',
     acceptDisclaimer: false
@@ -58,6 +43,21 @@ export default function TopUpRequest() {
   });
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const dispatch = useDispatch<AppDispatch>();
+
+  const currencies = useSelector((s: RootState) => s.currencies?.items ?? []);
+
+  useEffect(() => {
+    if (!currencies.length) dispatch(fetchCurrencies());
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (currencies.length && !formData.currencyId) {
+      const first = currencies[0];
+      const firstNetwork = first?.networks?.[0];
+      setFormData(prev => ({ ...prev, currencyId: first?.id ?? null, networkId: firstNetwork?.id ?? null }));
+    }
+  }, [currencies]);
 
 
 
@@ -79,21 +79,29 @@ export default function TopUpRequest() {
       return;
     }
 
-    const networkFee = networkFees[formData.network as keyof typeof networkFees] || 0;
-    const exchangeRate = getExchangeRate(formData.coin as keyof typeof COINS);
+    // Determine network fee estimate (AUD) from selected currency/network
+    let networkFeeAUD = 0;
+    const selectedCurrency = currencies.find((c: any) => c.id === formData.currencyId);
+    const selectedNetwork = selectedCurrency?.networks?.find((n: any) => n.id === formData.networkId);
+    if (selectedNetwork && selectedNetwork.network_fee_estimate_aud) {
+      networkFeeAUD = parseFloat(String(selectedNetwork.network_fee_estimate_aud)) || 0;
+    }
+
+    const exchangeRate = getExchangeRate(selectedCurrency?.code ?? '' as any);
     const exchangeFeePercent = 0.015; // 1.5%
     const exchangeFee = parseFloat((amount * exchangeFeePercent).toFixed(2));
-    const amountAfterFees = Math.max(0, amount - exchangeFee);
-    const cryptoAmount = amountAfterFees / exchangeRate; // coin units
-    const totalReceive = Math.max(0, cryptoAmount - networkFee);
+    // Subtract exchange fee and network fee (AUD) to compute crypto amount
+    const amountAfterFees = Math.max(0, amount - exchangeFee - networkFeeAUD);
+    const cryptoAmount = exchangeRate > 0 ? amountAfterFees / exchangeRate : 0; // coin units
+    const totalReceive = Math.max(0, cryptoAmount);
 
     setFees({
-      networkFee,
+      networkFee: networkFeeAUD,
       exchangeFee,
       cryptoAmount,
       totalReceive
     });
-  }, [formData.amount, formData.coin, formData.network]);
+  }, [formData.amount, formData.currencyId, formData.networkId, currencies]);
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const target = e.target as HTMLInputElement | HTMLSelectElement;
@@ -105,15 +113,11 @@ export default function TopUpRequest() {
     setErrors(prev => ({ ...prev, [name]: undefined }));
   };
 
-  const handleCoinChange = (e: ChangeEvent<HTMLSelectElement>) => {
-    const coinKey = e.target.value as keyof typeof COINS;
-    setFormData(prev => ({
-      ...prev,
-      coin: coinKey,
-      network: COINS[coinKey].networks[0],
-      walletAddress: '',
-      confirmAddress: ''
-    }));
+  const handleCurrencyChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    const cid = parseInt(e.target.value, 10) || null;
+    const currency = currencies.find((c: any) => c.id === cid);
+    const nid = currency?.networks?.[0]?.id ?? null;
+    setFormData(prev => ({ ...prev, currencyId: cid, networkId: nid, walletAddress: '', confirmAddress: '' }));
     setErrors(prev => ({ ...prev, walletAddress: undefined, confirmAddress: undefined }));
   };
 
@@ -123,7 +127,7 @@ export default function TopUpRequest() {
     const newErrors: Record<string, string | undefined> = {};
     const amountNum = parseFloat(formData.amount || '0');
     if (!formData.amount || isNaN(amountNum) || amountNum < 10) newErrors.amount = 'Please enter a valid amount (minimum $10 AUD)';
-    const addressError = validateAddressForNetwork(formData.network, formData.walletAddress);
+    const addressError = validateAddressForNetwork(formData.walletAddress);
     if (addressError) newErrors.walletAddress = addressError;
     if (!formData.confirmAddress) newErrors.confirmAddress = 'Please confirm wallet address';
     if (formData.walletAddress !== formData.confirmAddress) newErrors.confirmAddress = 'Wallet addresses do not match';
@@ -135,58 +139,60 @@ export default function TopUpRequest() {
     setIsSubmitting(true);
     try {
       const payload = {
-        amountAUD: amountNum,
-        coin: formData.coin,
-        network: formData.network,
-        walletAddress: formData.walletAddress,
-        fees: {
-          exchangeFeeAUD: fees.exchangeFee,
-          networkFee: fees.networkFee,
-          totalReceiveCrypto: fees.totalReceive
-        }
-      };
-      // If API client is configured, call the backend; otherwise just simulate a flow
-      if (api) {
-        await api.post('/top-ups', payload);
-      } else {
-        await new Promise(resolve => setTimeout(resolve, 800));
-      }
+        amount_aud: amountNum.toFixed(2),
+        currency_id: formData.currencyId,
+        network_id: formData.networkId,
+        wallet_address: formData.walletAddress,
+        wallet_address_confirmation: formData.confirmAddress,
+        // optional fields the API may accept
+        platform_fee_aud: fees.exchangeFee.toFixed(2),
+        network_fee_aud: String(currencies.find((c: any) => c.id === formData.currencyId)?.networks?.find((n: any) => n.id === formData.networkId)?.network_fee_estimate_aud ?? '0'),
+        total_aud: (amountNum - fees.exchangeFee - (parseFloat(String(currencies.find((c: any) => c.id === formData.currencyId)?.networks?.find((n: any) => n.id === formData.networkId)?.network_fee_estimate_aud) || '0'))).toFixed(2),
+      } as any;
 
-      // success
-      setIsSubmitting(false);
-      // Persist to localStorage so it shows up in the dashboard
-      try {
-        const now = new Date();
-        const newTopUp = {
-          id: `REQ-${now.getFullYear()}-${now.getTime()}`,
-          date: now.toISOString(),
-          amount: amountNum,
-          coin: formData.coin,
-          network: formData.network,
-          status: 'pending',
-          walletAddress: formData.walletAddress,
-          transactionHash: null,
-          adminNotes: null
-        };
-        // Read existing items from localStorage
-        const existing = JSON.parse(localStorage.getItem('topUps') || '[]');
-        existing.unshift(newTopUp);
-        localStorage.setItem('topUps', JSON.stringify(existing));
-        // Inform any other components on the page
+      // Dispatch the thunk and wait for it to complete
+      const resultAction = await dispatch(createTopUpRequest(payload));
+
+      if (createTopUpRequest.fulfilled.match(resultAction)) {
+        // success
+        setIsSubmitting(false);
+        const respData = resultAction.payload?.data ?? resultAction.payload;
         try {
-          window.dispatchEvent(new CustomEvent('topup:added', { detail: newTopUp }));
-        } catch (e) {
-          // ignore if CustomEvent is not supported in the env
+          const now = new Date();
+          const selectedCurrency = currencies.find((c: any) => c.id === formData.currencyId);
+          const selectedNetwork = selectedCurrency?.networks?.find((n: any) => n.id === formData.networkId);
+          const newTopUp = {
+            id: respData?.id ?? `REQ-${now.getFullYear()}-${now.getTime()}`,
+            date: now.toISOString(),
+            amount: amountNum,
+            coin: selectedCurrency?.code ?? selectedCurrency?.name ?? null,
+            network: selectedNetwork?.name ?? null,
+            status: respData?.status ?? 'pending',
+            walletAddress: formData.walletAddress,
+            transactionHash: respData?.transaction_id ?? null,
+            adminNotes: null,
+          };
+          const existing = JSON.parse(localStorage.getItem('topUps') || '[]');
+          existing.unshift(newTopUp);
+          localStorage.setItem('topUps', JSON.stringify(existing));
+          try {
+            window.dispatchEvent(new CustomEvent('topup:added', { detail: newTopUp }));
+          } catch (e) {
+            // ignore
+          }
+        } catch (err) {
+          console.warn('Failed to persist top-up request in localStorage', err);
         }
-      } catch (err) {
-        // ignore localstorage errors
-        console.warn('Failed to persist top-up request in localStorage', err);
+        setFormData({ ...formData, amount: '', walletAddress: '', confirmAddress: '', acceptDisclaimer: false });
+        setFees({ networkFee: 0, exchangeFee: 0, cryptoAmount: 0, totalReceive: 0 });
+        setErrors({});
+        alert('Top-up request submitted successfully!');
+      } else {
+        // rejected
+        setIsSubmitting(false);
+        const message = (resultAction.payload as string) || (resultAction.error?.message) || 'Failed to submit top-up request';
+        setErrors(prev => ({ ...prev, submit: message }));
       }
-      // Minimal UX: clear form and show success
-      setFormData({ ...formData, amount: '', walletAddress: '', confirmAddress: '', acceptDisclaimer: false });
-      setFees({ networkFee: 0, exchangeFee: 0, cryptoAmount: 0, totalReceive: 0 });
-      setErrors({});
-      alert('Top-up request submitted successfully!');
     } catch (error) {
       setIsSubmitting(false);
       const axiosError = error as AxiosError;
@@ -207,29 +213,14 @@ export default function TopUpRequest() {
     return value ? value.toFixed(decimals) : '0';
   }
 
-  function getExchangeRate(coin: keyof typeof COINS) {
+  function getExchangeRate(code: string) {
     // In a real app, this should come from an up-to-date exchange rate endpoint
-    return coin === 'USDC' || coin === 'USDT' ? 1 : coin === 'BTC' ? 45000 : coin === 'ETH' ? 2500 : 300;
+    return code === 'USDC' || code === 'USDT' ? 1 : code === 'BTC' ? 45000 : code === 'ETH' ? 2500 : 300;
   }
 
-  function validateAddressForNetwork(network: string, address: string) {
-    if (!address) return 'Wallet address is required';
-    const a = address.trim();
-    if (network === 'Bitcoin') {
-      if (!/^(bc1|[13])[A-HJ-NP-Za-km-z1-9]{25,39}$/.test(a)) return 'Invalid Bitcoin address';
-    }
-    if (network === 'Lightning Network') {
-      if (a.length < 10) return 'Invalid Lightning address';
-    }
-    if (['Ethereum', 'Arbitrum', 'Optimism', 'Polygon', 'BSC', 'BNB'].includes(network)) {
-      if (!/^0x[a-fA-F0-9]{40}$/.test(a)) return 'Invalid EVM-style address (expect 0x...)';
-    }
-    if (network === 'Tron') {
-      if (!/^T[a-zA-Z0-9]{33}$/.test(a)) return 'Invalid Tron address';
-    }
-    if (network === 'Solana') {
-      if (!(a.length >= 32 && a.length <= 44)) return 'Invalid Solana address';
-    }
+  function validateAddressForNetwork(address: string) {
+    // Only require that a wallet address is provided.
+    if (!address || !address.trim()) return 'Wallet address is required';
     return undefined;
   }
 
@@ -273,26 +264,21 @@ export default function TopUpRequest() {
               {/* Coin Selection */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="coin" className="block text-sm font-semibold text-gray-900 mb-3 dark:text-white">
+                  <label htmlFor="currency" className="block text-sm font-semibold text-gray-900 mb-3 dark:text-white">
                     Select Coin/Token <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
                     <select
                       required
-                      id="coin"
-                      name="coin"
-                      value={formData.coin}
-                      onChange={handleCoinChange}
+                      id="currency"
+                      name="currency"
+                      value={formData.currencyId ?? ''}
+                      onChange={handleCurrencyChange}
                       className="w-full px-4 py-3.5 bg-gray-50 dark:bg-gray-700 border-0 rounded-xl text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-gray-700 transition-all appearance-none cursor-pointer"
                     >
-                      {(Object.keys(COINS) as (keyof typeof COINS)[]).map((key) => {
-                        const coin = COINS[key];
-                        return (
-                          <option key={String(key)} value={String(key)}>
-                            {coin.icon} {String(key)} - {coin.name}
-                          </option>
-                        );
-                      })}
+                      {currencies.map((c: any) => (
+                        <option key={c.id} value={c.id}>{c.code} - {c.name}</option>
+                      ))}
                     </select>
                     <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
                       <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -311,14 +297,12 @@ export default function TopUpRequest() {
                       required
                       id="network"
                       name="network"
-                      value={formData.network}
-                      onChange={handleInputChange}
+                      value={formData.networkId ?? ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, networkId: parseInt(e.target.value, 10) || null }))}
                       className="w-full px-4 py-3.5 bg-gray-50 dark:bg-gray-700 border-0 rounded-xl text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-gray-700 transition-all appearance-none cursor-pointer"
                     >
-                      {COINS[formData.coin as keyof typeof COINS].networks.map((network: string) => (
-                        <option key={network} value={network}>
-                          {network}
-                        </option>
+                      {(currencies.find((c: any) => c.id === formData.currencyId)?.networks ?? []).map((network: any) => (
+                        <option key={network.id} value={network.id}>{network.name}</option>
                       ))}
                     </select>
                     <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
@@ -404,15 +388,15 @@ export default function TopUpRequest() {
                       <span className="text-sm text-gray-900 dark:text-gray-100">-${fees.exchangeFee}</span>
                     </div>
                     <div className="flex justify-between items-center py-2">
-                      <span className="text-sm text-gray-600 dark:text-gray-300">Network Fee</span>
-                      <span className="text-sm text-gray-900 dark:text-gray-100">~{formatCrypto(fees.networkFee)} {String(formData.coin)}</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-300">Network Fee (est.)</span>
+                      <span className="text-sm text-gray-900 dark:text-gray-100">{formatAUD(fees.networkFee)}</span>
                     </div>
                     <div className="border-t border-blue-200 dark:border-blue-900"></div>
                     <div className="flex justify-between items-center bg-white dark:bg-gray-700 rounded-lg px-3 py-3">
                       <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">You'll Receive</span>
                       <div className="text-right">
-                        <span className="text-lg font-bold text-blue-600 dark:text-blue-400">{formatCrypto(fees.totalReceive)} {String(formData.coin)}</span>
-                        <p className="text-xs text-gray-500 dark:text-gray-300 mt-0.5">≈ ${(parseFloat(formData.amount) - fees.exchangeFee).toFixed(2)} AUD</p>
+                        <span className="text-lg font-bold text-blue-600 dark:text-blue-400">{formatCrypto(fees.totalReceive)} {String(currencies.find((c: any) => c.id === formData.currencyId)?.code ?? '')}</span>
+                        <p className="text-xs text-gray-500 dark:text-gray-300 mt-0.5">≈ ${(parseFloat(formData.amount) - fees.exchangeFee - (parseFloat(String(currencies.find((c: any) => c.id === formData.currencyId)?.networks?.find((n: any) => n.id === formData.networkId)?.network_fee_estimate_aud) || '0'))).toFixed(2)} AUD</p>
                       </div>
                     </div>
                   </div>

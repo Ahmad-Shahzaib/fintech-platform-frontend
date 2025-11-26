@@ -1,42 +1,91 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
-import { useSelector } from 'react-redux';
+import React, { useEffect, useState, useRef } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
 import { useAuth } from '@/context/AuthContext';
 import { UserRole } from '@/types/auth';
 import MultiStepForm from './MultiStepform';
-import { RootState } from '@/redux/store';
+import { RootState, AppDispatch } from '@/redux/store';
+import { fetchKycStatus } from '@/redux/thunk/kycStatusThunks';
+import { usePathname } from 'next/navigation';
 
 export default function KycModalLauncher() {
     const { submission } = useSelector((state: RootState) => state.kyc);
     const submissionData = submission?.data ?? null;
-    const isSubmitted = Boolean(submissionData);
+
+    const kycStatus = useSelector((state: RootState) => state.kycStatus);
+    const kycStatusData = kycStatus?.data ?? null;
+
+    // Ye naya logic hai - rejected ko allow karo lekin approved ko block
+    const isKycApproved = kycStatusData?.status === 'approved'; // ← apne backend ke exact status se match karna
+    const isKycRejected = kycStatusData?.status === 'rejected'; // ya 'denied', 'failed' etc. jo bhi ho
+
+    // Sirf tab submitted mana jayega jab approved ho, rejected ho to modal dikhega
+    const isSubmitted = isKycApproved || (submissionData && !isKycRejected);
 
     const [show, setShow] = useState(false);
+    const pathname = usePathname();
+    const previousPathname = useRef(pathname);
 
     const { isAuthenticated, isLoading: authLoading, user } = useAuth();
+    const dispatch = useDispatch<AppDispatch>();
 
-    // Initialize from sessionStorage: only show if flag is set, auth is ready and user is authenticated, and KYC not submitted
+    // Check if user should see KYC modal
+    const shouldShowKycModal = () => {
+        if (!isAuthenticated || user?.role !== UserRole.USER) return false;
+        if (isKycApproved) return false;
+
+        // Special Case: Rejected user on /kyc-status page → NO MODAL
+        if (isKycRejected && pathname === '/kyc-status') {
+            return false;
+        }
+
+        // Har aur jagah (including rejected on other pages) → Show modal
+        return true;
+    };
+
+    // Effect for initial check (login time)
     useEffect(() => {
         try {
             if (typeof window === 'undefined') return;
-            // Wait until auth check finishes
             if (authLoading) return;
+
+            if (isAuthenticated && user?.role === UserRole.USER && !kycStatusData && !kycStatus.loading) {
+                try {
+                    dispatch(fetchKycStatus());
+                } catch (e) {
+                    // ignore
+                }
+            }
+
             const flag = sessionStorage.getItem('kyc_modal');
-            // Show only for authenticated regular users (not admins)
-            if (flag && isAuthenticated && !isSubmitted && user?.role === UserRole.USER) {
+            if (flag && shouldShowKycModal()) {
                 setShow(true);
-            } else {
-                setShow(false);
             }
         } catch (e) {
             // ignore
         }
-    }, [isSubmitted, isAuthenticated, authLoading]);
+    }, [isAuthenticated, authLoading, user?.role, kycStatusData, isKycApproved]);
 
-    // When KYC gets submitted, ensure modal is hidden and clear the session flag
+    // Effect for route changes
     useEffect(() => {
-        if (isSubmitted) {
+        if (previousPathname.current === pathname) return;
+        previousPathname.current = pathname;
+
+        try {
+            if (typeof window === 'undefined') return;
+            const flag = sessionStorage.getItem('kyc_modal');
+            if (flag && shouldShowKycModal()) {
+                setShow(true);
+            }
+        } catch (e) {
+            // ignore
+        }
+    }, [pathname, isAuthenticated, user?.role, kycStatusData, isKycApproved]);
+
+    // Jab KYC approved ho jaye ya rejected na rahe tab hide karo
+    useEffect(() => {
+        if (isKycApproved) {
             setShow(false);
             try {
                 if (typeof window !== 'undefined') sessionStorage.removeItem('kyc_modal');
@@ -44,17 +93,50 @@ export default function KycModalLauncher() {
                 // ignore
             }
         }
-    }, [isSubmitted]);
+    }, [isKycApproved]);
 
-    // If user logs out, hide the modal
+    // Logout par hide
     useEffect(() => {
         if (!authLoading && !isAuthenticated) {
             setShow(false);
         }
     }, [isAuthenticated, authLoading]);
-    if (!show || isSubmitted) return null;
 
-    // Show a full-viewport backdrop and modal with a very high z-index so it appears above header
+    // Listen for external requests to open the KYC modal (e.g. button click elsewhere)
+    // NOTE: When the explicit `kyc_modal_open` event is received we open the modal
+    // as long as the user is authenticated, is a regular USER and the KYC isn't approved.
+    // This intentionally ignores the "rejected on /kyc-status hide" special-case so
+    // a user can re-open the modal from the status page by clicking the button.
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+
+        const handler = () => {
+            try {
+                if (!isAuthenticated || user?.role !== UserRole.USER) return;
+                if (isKycApproved) return;
+
+                try {
+                    sessionStorage.setItem('kyc_modal', '1');
+                } catch { }
+
+                setShow(true);
+            } catch (e) {
+                // ignore
+            }
+        };
+
+        window.addEventListener('kyc_modal_open', handler as EventListener);
+        return () => window.removeEventListener('kyc_modal_open', handler as EventListener);
+    }, [isAuthenticated, authLoading, user?.role, kycStatusData, isKycApproved]);
+
+    // Agar approved hai to kuch render nahi
+    if (isKycApproved) return null;
+    // Allow rendering when an explicit `show` is set (e.g. user clicked "Submit Your KYC").
+    // Only block rendering when not explicitly requested AND general rules disallow it.
+    if (!show && !shouldShowKycModal()) return null;
+    // If nothing requested to show, don't render
+    if (!show) return null;
+
     return (
         <div className="fixed inset-0 z-[99999] flex items-center justify-center">
             <div className="absolute inset-0 bg-black/40" />
@@ -65,8 +147,14 @@ export default function KycModalLauncher() {
                         <div className="flex items-center space-x-3">
                             <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">K</div>
                             <div>
-                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Identity Verification</h3>
-                                <p className="text-xs text-gray-500">Complete your KYC to unlock full access</p>
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                                    {isKycRejected ? 'KYC Rejected – Please Resubmit' : 'Identity Verification'}
+                                </h3>
+                                <p className="text-xs text-gray-500">
+                                    {isKycRejected
+                                        ? 'Your previous submission was rejected. Please review and submit again.'
+                                        : 'Complete your KYC to unlock full access'}
+                                </p>
                             </div>
                         </div>
                         <div>
@@ -80,7 +168,7 @@ export default function KycModalLauncher() {
                         </div>
                     </div>
 
-                    <div className="max-h-[calc(100vh-8rem)] overflow-auto p-6 bg-white dark:bg-gray-900">
+                    <div className="max-h-[calc(100vh-8rem)] overflow-auto bg-white dark:bg-gray-900">
                         <MultiStepForm />
                     </div>
                 </div>

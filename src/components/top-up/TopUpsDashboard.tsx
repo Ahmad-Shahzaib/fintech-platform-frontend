@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import type { AppDispatch, RootState } from '@/redux/store';
+import { fetchTopUps } from '@/redux/thunk/topUpsThunks';
 import { X, ExternalLink, Copy, Check } from 'lucide-react';
 
 
@@ -16,72 +19,34 @@ type TopUp = {
   adminNotes?: string | null;
 };
 
-const DEFAULT_TOPUPS: TopUp[] = [
-  {
-    id: 'REQ-2024-001',
-    date: '2024-03-15',
-    amount: 500,
-    coin: 'USDT',
-    network: 'TRC20',
-    status: 'completed',
-    walletAddress: 'TXYZa1b2c3d4e5f6g7h8i9j0k1l2m3n4o5',
-    transactionHash: '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
-    adminNotes: null
-  },
-  {
-    id: 'REQ-2024-002',
-    date: '2024-03-18',
-    amount: 1000,
-    coin: 'USDC',
-    network: 'ERC20',
-    status: 'processing',
-    walletAddress: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
-    transactionHash: null,
-    adminNotes: null
-  },
-  {
-    id: 'REQ-2024-003',
-    date: '2024-03-20',
-    amount: 250,
-    coin: 'BTC',
-    network: 'Bitcoin',
-    status: 'pending',
-    walletAddress: 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh',
-    transactionHash: null,
-    adminNotes: null
-  }
-];
 
 const TopUpsDashboard = () => {
   const [selectedTopUp, setSelectedTopUp] = useState<TopUp | null>(null);
-  const [topUps, setTopUps] = useState<TopUp[]>([]);
+  const dispatch = useDispatch<AppDispatch>();
+  // page and status for server pagination
+  const [page, setPage] = useState<number>(1);
+  const status = 'pending';
+
+  // Read top-ups from redux store (server)
+  const topUpsItems = useSelector((s: RootState) => s.topUps?.items ?? []);
+  const pagination = useSelector((s: RootState) => s.topUps?.pagination ?? null);
+  const loading = useSelector((s: RootState) => s.topUps?.loading ?? false);
+  const error = useSelector((s: RootState) => s.topUps?.error ?? null);
   const [copiedWallet, setCopiedWallet] = useState(false);
   const [copiedTxHash, setCopiedTxHash] = useState(false);
 
   useEffect(() => {
-    const readTopUps = () => {
-      try {
-        const stored = JSON.parse(localStorage.getItem('topUps') || 'null');
-        if (Array.isArray(stored) && stored.length > 0) {
-          setTopUps(stored);
-        } else {
-          setTopUps(DEFAULT_TOPUPS);
-        }
-      } catch (err) {
-        setTopUps(DEFAULT_TOPUPS);
-      }
-    };
-    readTopUps();
+    // load top-ups from API via redux
+    dispatch(fetchTopUps({ status, page }));
 
     const onAdded = (e: Event) => {
-      const detail = (e as CustomEvent).detail as TopUp | undefined;
-      if (detail) setTopUps(prev => [detail, ...prev]);
-      else readTopUps();
+      // when a new top-up is added elsewhere, refresh the list from server
+      dispatch(fetchTopUps({ status, page }));
     };
 
     window.addEventListener('topup:added', onAdded as EventListener);
     return () => window.removeEventListener('topup:added', onAdded as EventListener);
-  }, []);
+  }, [dispatch, page]);
 
   // Copy helpers
   const copyToClipboard = async (text: string, onCopied: (v: boolean) => void) => {
@@ -114,6 +79,14 @@ const TopUpsDashboard = () => {
   }, [selectedTopUp]);
 
   const explorerUrl = selectedTopUp ? getExplorerUrl(selectedTopUp.network, selectedTopUp.transactionHash) : null;
+
+  // Pagination UI helpers (simple)
+  const goToPage = (p: number) => {
+    if (!pagination) return;
+    const to = Math.max(1, Math.min(p, pagination.last_page));
+    setPage(to);
+    dispatch(fetchTopUps({ status, page: to }));
+  };
 
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
@@ -165,25 +138,50 @@ const TopUpsDashboard = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                {topUps.map((topUp) => (
-                  <tr key={topUp.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">{topUp.id}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{formatDate(topUp.date)}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-gray-100">${topUp.amount.toLocaleString()}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{topUp.coin}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{topUp.network}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{getStatusBadge(topUp.status)}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <button onClick={() => setSelectedTopUp(topUp)} className="text-blue-600 dark:text-blue-400 hover:text-blue-800 font-medium text-sm hover:underline">View Details</button>
-                    </td>
-                  </tr>
-                ))}
+                {(topUpsItems || []).map((raw) => {
+                  // normalize server item to local TopUp type
+                  const topUp: TopUp = {
+                    id: raw.transaction_id ?? String(raw.id),
+                    date: raw.created_at ?? '',
+                    amount: parseFloat(raw.amount_aud ?? '0'),
+                    coin: raw.currency ?? raw.coin ?? '',
+                    network: raw.network ?? '',
+                    status: (raw.status as any) ?? 'pending',
+                    walletAddress: raw.wallet_address ?? raw.walletAddress ?? '',
+                    transactionHash: raw.transaction_hash ?? raw.transactionHash ?? null,
+                    adminNotes: raw.admin_notes ?? raw.adminNotes ?? null,
+                  };
+                  return (
+                    <tr key={topUp.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">{topUp.id}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{formatDate(topUp.date)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-gray-100">${topUp.amount.toLocaleString()}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{topUp.coin}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{topUp.network}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">{getStatusBadge(topUp.status)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <button onClick={() => setSelectedTopUp(topUp)} className="text-blue-600 dark:text-blue-400 hover:text-blue-800 font-medium text-sm hover:underline">View Details</button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         </div>
 
-        {topUps.length === 0 && (
+        {/* Pagination controls */}
+        {pagination && (
+          <div className="mt-4 flex items-center justify-between max-w-7xl mx-auto">
+            <div className="text-sm text-gray-600 dark:text-gray-300">Showing page {pagination.current_page} of {pagination.last_page} — {pagination.total} total</div>
+            <div className="space-x-2">
+              <button onClick={() => goToPage(pagination.current_page - 1)} disabled={pagination.current_page <= 1} className="px-3 py-1 bg-white dark:bg-gray-700 border rounded text-sm">Previous</button>
+              <button onClick={() => goToPage(pagination.current_page + 1)} disabled={pagination.current_page >= pagination.last_page} className="px-3 py-1 bg-white dark:bg-gray-700 border rounded text-sm">Next</button>
+            </div>
+          </div>
+        )}
+
+        {(!loading && (topUpsItems || []).length === 0) && (
           <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg shadow">
             <p className="text-gray-500 dark:text-gray-300">No top-up requests found</p>
           </div>
@@ -285,4 +283,3 @@ const TopUpsDashboard = () => {
 };
 
 export default TopUpsDashboard;
-
