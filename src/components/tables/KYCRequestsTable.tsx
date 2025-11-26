@@ -549,7 +549,7 @@ export function KYCRequestsTable() {
                                                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Front Side</p>
                                                 <div
                                                     onClick={() => window.open(selectedDetail.document_front_url!, "_blank")}
-                                                    className="group relative rounded-xl overflow-hidden shadow-lg cursor-pointer hover:shadow-xl transition"
+                                                    className="group relative rounded-xl overflow-hidden  cursor-pointer hover:shadow-xl transition"
                                                 >
                                                     <Image
                                                         src={selectedDetail.document_front_url}
@@ -576,7 +576,7 @@ export function KYCRequestsTable() {
                                                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Back Side</p>
                                                 <div
                                                     onClick={() => window.open(selectedDetail.document_back_url!, "_blank")}
-                                                    className="group relative rounded-xl overflow-hidden shadow-lg cursor-pointer hover:shadow-xl transition"
+                                                    className="group relative rounded-xl overflow-hidden  cursor-pointer  transition"
                                                 >
                                                     <Image
                                                         src={selectedDetail.document_back_url}
@@ -599,7 +599,7 @@ export function KYCRequestsTable() {
                                                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Selfie Verification</p>
                                                 <div
                                                     onClick={() => window.open(selectedDetail.selfie_url!, "_blank")}
-                                                    className="group relative rounded-xl overflow-hidden shadow-lg cursor-pointer hover:shadow-xl transition"
+                                                    className="group relative rounded-xl overflow-hidden  cursor-pointer  transition"
                                                 >
                                                     <Image
                                                         src={selectedDetail.selfie_url}

@@ -221,7 +221,7 @@ export default function KYCPage() {
                                                 <div
                                                     key={img.label}
                                                     onClick={() => img.url && window.open(img.url, "_blank")}
-                                                    className="group relative rounded-lg overflow-hidden shadow hover:shadow-lg cursor-pointer transition"
+                                                    className="group relative rounded-lg overflow-hidden  cursor-pointer transition"
                                                 >
                                                     {img.url ? (
                                                         <Image
