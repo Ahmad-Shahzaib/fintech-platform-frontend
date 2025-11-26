@@ -77,6 +77,7 @@ export const loginUser = createAsyncThunk(
           id: String(userPayload.id),
           email: userPayload.email,
           name: userPayload.name,
+          phone: userPayload.phone ?? userPayload.phoneNumber ?? userPayload.phone_number ?? null,
           // include email_verified so UI can check it before allowing login
           email_verified: userPayload.email_verified ?? userPayload.emailVerified ?? false,
           role:

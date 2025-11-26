@@ -11,6 +11,7 @@ export interface User {
   name: string;
   role: UserRole;
   avatar?: string;
+  phone?: string;
 }
 
 // Auth state interface

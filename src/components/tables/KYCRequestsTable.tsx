@@ -559,7 +559,7 @@ export function KYCRequestsTable() {
                                                         unoptimized
                                                         className=" h-auto  object-contain bg-gray-50 dark:bg-gray-900"
                                                     />
-                                                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition flex items-center justify-center">
+                                                    <div className="absolute inset-0 group-hover:bg-opacity-30 transition flex items-center justify-center">
                                                         <ExternalLink className="text-white opacity-0 group-hover:opacity-100" size={36} />
                                                     </div>
                                                 </div>
@@ -586,7 +586,7 @@ export function KYCRequestsTable() {
                                                         unoptimized
                                                         className=" h-auto  object-contain bg-gray-50 dark:bg-gray-900"
                                                     />
-                                                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition flex items-center justify-center">
+                                                    <div className="absolute inset-0  group-hover:bg-opacity-30 transition flex items-center justify-center">
                                                         <ExternalLink className="text-white opacity-0 group-hover:opacity-100" size={36} />
                                                     </div>
                                                 </div>
@@ -609,7 +609,7 @@ export function KYCRequestsTable() {
                                                         unoptimized
                                                         className=" h-auto  object-contain rounded-xl bg-gray-50 dark:bg-gray-900"
                                                     />
-                                                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition flex items-center justify-center">
+                                                    <div className="absolute inset-0 group-hover:bg-opacity-30 transition flex items-center justify-center">
                                                         <ExternalLink className="text-white opacity-0 group-hover:opacity-100" size={36} />
                                                     </div>
                                                 </div>
@@ -651,10 +651,10 @@ export function KYCRequestsTable() {
                             <Button variant="outline" onClick={() => setShowApproveModal(false)}>
                                 Cancel
                             </Button>
-                            <Button onClick={confirmApprove}>
+                            <Button className="bg-green-700  text-white" onClick={confirmApprove}>
                                 Yes, Approve
                             </Button>
-                        </div>
+                        </div>  
                     </div>
                 </div>
             )}

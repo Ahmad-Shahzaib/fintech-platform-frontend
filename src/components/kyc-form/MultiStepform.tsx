@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { resetKycState } from '@/redux/slice/kycSlice';
 import { submitKyc } from '@/redux/thunk/kycThunks';
+import DatePickerComponent from '@/components/form/date-picker';
 
 const COUNTRY_OPTIONS = [
   { code: 'US', label: 'United States' },
@@ -105,6 +106,14 @@ export default function MultiStepForm() {
     selfie: null
   });
 
+  // Ref to track preview URLs for cleanup
+  const previewsRef = useRef<DocumentPreviews>(previews);
+  
+  // Update the ref whenever previews change
+  useEffect(() => {
+    previewsRef.current = previews;
+  }, [previews]);
+
   const [clientError, setClientError] = useState<string | null>(null);
 
   // Handle form submission using Redux thunk
@@ -166,13 +175,8 @@ export default function MultiStepForm() {
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
       }
-
-      // Revoke all preview URLs to avoid memory leaks
-      Object.values(previews).forEach(preview => {
-        if (preview) URL.revokeObjectURL(preview);
-      });
     };
-  }, [stream, previews]);
+  }, [stream]);
 
   // Effect to handle video element when stream changes
   useEffect(() => {
@@ -189,6 +193,16 @@ export default function MultiStepForm() {
     }
   }, [stream]);
 
+  // Clean up preview URLs when component unmounts
+  useEffect(() => {
+    return () => {
+      // Revoke all preview URLs to avoid memory leaks
+      Object.values(previewsRef.current).forEach(preview => {
+        if (preview) URL.revokeObjectURL(preview);
+      });
+    };
+  }, []);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const target = e.target as HTMLInputElement;
     const { name, value, type } = target;
@@ -199,33 +213,57 @@ export default function MultiStepForm() {
     } as unknown as FormDataType));
   };
 
-  // Prefill email from auth user or localStorage if available
+  // Prefill email, name, and phone from auth user or localStorage if available
   useEffect(() => {
-    if (authUser && authUser.email) {
-      setFormData(prev => ({ ...prev, email: authUser.email }));
+    console.log('Auth User Data:', authUser);
+    
+    if (authUser) {
+      console.log('Setting form data from authUser:', {
+        email: authUser.email,
+        name: authUser.name,
+        phone: authUser.phone
+      });
+      
+      setFormData(prev => ({
+        ...prev,
+        email: authUser.email || prev.email,
+        fullName: authUser.name || prev.fullName,
+        phoneNumber: authUser.phone || prev.phoneNumber
+      }));
       return;
     }
 
     try {
       if (typeof window !== 'undefined') {
         const stored = localStorage.getItem('user');
+        console.log('LocalStorage user:', stored);
+        
         if (stored) {
           const parsed = JSON.parse(stored);
-          if (parsed?.email) {
-            setFormData(prev => ({ ...prev, email: parsed.email }));
-          }
+          console.log('Parsed user data:', parsed);
+          console.log('Phone from localStorage:', parsed?.phone);
+          
+          setFormData(prev => ({
+            ...prev,
+            email: parsed?.email || prev.email,
+            fullName: parsed?.name || prev.fullName,
+            phoneNumber: parsed?.phone || prev.phoneNumber
+          }));
         }
       }
-    } catch {
-      // ignore parse errors
+    } catch (err) {
+      console.error('Error parsing localStorage:', err);
     }
   }, [authUser]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, docType: keyof DocumentFiles) => {
     const file = e.target.files?.[0] ?? null;
+    console.log(`File selected for ${docType}:`, file?.name);
+    
     if (file) {
       // Create a preview URL
       const previewUrl = URL.createObjectURL(file);
+      console.log(`Preview URL created for ${docType}:`, previewUrl);
 
       setFormData(prev => ({
         ...prev,
@@ -235,10 +273,18 @@ export default function MultiStepForm() {
         }
       }));
 
-      setPreviews(prev => ({
-        ...prev,
-        [docType]: previewUrl
-      }));
+      setPreviews(prev => {
+        // Revoke the old preview URL if it exists
+        if (prev[docType]) {
+          URL.revokeObjectURL(prev[docType]!);
+        }
+        const newPreviews = {
+          ...prev,
+          [docType]: previewUrl
+        };
+        console.log('Updated previews:', newPreviews);
+        return newPreviews;
+      });
     }
   };
 
@@ -327,10 +373,16 @@ export default function MultiStepForm() {
           }
         }));
 
-        setPreviews(prev => ({
-          ...prev,
-          selfie: previewUrl
-        }));
+        setPreviews(prev => {
+          // Revoke the old preview URL if it exists
+          if (prev.selfie) {
+            URL.revokeObjectURL(prev.selfie);
+          }
+          return {
+            ...prev,
+            selfie: previewUrl
+          };
+        });
 
         closeCamera();
       }, "image/jpeg", 0.9);
@@ -399,12 +451,20 @@ export default function MultiStepForm() {
                       <label className="block text-sm font-semibold text-gray-900 mb-2">
                         Date of Birth <span className="text-red-500">*</span>
                       </label>
-                      <input
-                        type="date"
-                        name="dateOfBirth"
-                        value={formData.dateOfBirth}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3.5 bg-gray-50 border-0 rounded-xl text-gray-900 text-sm placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                      <DatePickerComponent
+                        id="dateOfBirth"
+                        placeholder="Select date of birth"
+                        defaultDate={formData.dateOfBirth || undefined}
+                        onChange={(selectedDates) => {
+                          if (selectedDates && selectedDates.length > 0) {
+                            const date = selectedDates[0];
+                            const formattedDate = date.toISOString().split('T')[0];
+                            setFormData(prev => ({
+                              ...prev,
+                              dateOfBirth: formattedDate
+                            }));
+                          }
+                        }}
                       />
                     </div>
                     <div>
@@ -484,7 +544,7 @@ export default function MultiStepForm() {
 
                   <div>
                     <label className="block text-sm font-semibold text-gray-900 mb-2">
-                      Email (already collected at signup)
+                      Email <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="email"
@@ -492,7 +552,7 @@ export default function MultiStepForm() {
                       value={formData.email}
                       onChange={handleInputChange}
                       placeholder="e.g. you@example.com"
-                      className="w-full px-4 py-3.5 bg-gray-100 border-0 rounded-xl text-gray-900 text-sm placeholder-gray-400"
+                      className="w-full px-4 py-3.5 bg-gray-50 border-0 rounded-xl text-gray-900 text-sm placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
                     />
                   </div>
                 </div>
@@ -966,58 +1026,61 @@ export default function MultiStepForm() {
                     </div>
 
                     {/* Document previews */}
-                    <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <p className="text-xs text-gray-500 mb-2">Front Document</p>
-                        {previews.front ? (
-                          <div className="aspect-5/3 rounded-xl overflow-hidden border border-gray-200">
-                            <img
-                              src={previews.front}
-                              alt="Front document preview"
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        ) : (
-                          <div className="aspect-5/3 bg-gray-100 rounded-xl flex items-center justify-center border border-gray-200">
-                            <span className="text-xs text-gray-400">Not uploaded</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {formData.documentType !== 'passport' && (
+                    <div className="mt-6">
+                      <p className="text-sm font-semibold text-gray-900 mb-4">Uploaded Documents</p>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
-                          <p className="text-xs text-gray-500 mb-2">Back Document</p>
-                          {previews.back ? (
-                            <div className="aspect-5/3 rounded-xl overflow-hidden border border-gray-200">
+                          <p className="text-xs text-gray-500 mb-2">Front Document</p>
+                          {previews.front ? (
+                            <div className="aspect-video rounded-xl overflow-hidden border-2 border-gray-200">
                               <img
-                                src={previews.back}
-                                alt="Back document preview"
-                                className="w-full h-full object-cover"
+                                src={previews.front}
+                                alt="Front document preview"
+                                className="w-full h-full object-contain bg-gray-50"
                               />
                             </div>
                           ) : (
-                            <div className="aspect-5/3 bg-gray-100 rounded-xl flex items-center justify-center border border-gray-200">
+                            <div className="aspect-video bg-gray-100 rounded-xl flex items-center justify-center border-2 border-dashed border-gray-300">
                               <span className="text-xs text-gray-400">Not uploaded</span>
                             </div>
                           )}
                         </div>
-                      )}
 
-                      <div>
-                        <p className="text-xs text-gray-500 mb-2">Selfie</p>
-                        {previews.selfie ? (
-                          <div className="aspect-5/3 rounded-xl overflow-hidden border border-gray-200">
-                            <img
-                              src={previews.selfie}
-                              alt="Selfie preview"
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        ) : (
-                          <div className="aspect-5/3 bg-gray-100 rounded-xl flex items-center justify-center border border-gray-200">
-                            <span className="text-xs text-gray-400">Not uploaded</span>
+                        {formData.documentType !== 'passport' && (
+                          <div>
+                            <p className="text-xs text-gray-500 mb-2">Back Document</p>
+                            {previews.back ? (
+                              <div className="aspect-video rounded-xl overflow-hidden border-2 border-gray-200">
+                                <img
+                                  src={previews.back}
+                                  alt="Back document preview"
+                                  className="w-full h-full object-contain bg-gray-50"
+                                />
+                              </div>
+                            ) : (
+                              <div className="aspect-video bg-gray-100 rounded-xl flex items-center justify-center border-2 border-dashed border-gray-300">
+                                <span className="text-xs text-gray-400">Not uploaded</span>
+                              </div>
+                            )}
                           </div>
                         )}
+
+                        <div>
+                          <p className="text-xs text-gray-500 mb-2">Selfie Photo</p>
+                          {previews.selfie ? (
+                            <div className="aspect-video rounded-xl overflow-hidden border-2 border-gray-200">
+                              <img
+                                src={previews.selfie}
+                                alt="Selfie preview"
+                                className="w-full h-full object-contain bg-gray-50"
+                              />
+                            </div>
+                          ) : (
+                            <div className="aspect-video bg-gray-100 rounded-xl flex items-center justify-center border-2 border-dashed border-gray-300">
+                              <span className="text-xs text-gray-400">Not uploaded</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>

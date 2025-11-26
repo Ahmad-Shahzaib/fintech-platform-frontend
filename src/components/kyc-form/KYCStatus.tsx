@@ -32,7 +32,8 @@ const KYCStatus = () => {
 
     const displayStatusLabel = () => {
         if (!data || data.status === 'not_submitted' || !data.status) return 'Not Submitted'
-        return data.status
+        const status = data.status
+        return status.charAt(0).toUpperCase() + status.slice(1)
     }
 
     const statusColor = () => {
@@ -93,13 +94,16 @@ const KYCStatus = () => {
 
                                 {/* ==== REJECTION BLOCK – ONLY SHOW WHEN REJECTED ==== */}
                                 {data?.status === 'rejected' && data?.rejection_reason && (
-                                    <div className="pt-4 mt-4 border-t border-gray-200 dark:border-gray-600">
-                                        <span className="text-gray-500 dark:text-gray-400 text-sm">
-                                            Your KYC verification has been rejected by the admin
+                                    <div className="pt-4 mt-4 border-t border-gray-200 dark:border-gray-600 bg-red-200 rounded-lg p-4">
+                                        <span className="text-red-600 text-sm">
+                                            Your KYC verification has been rejected by the admin Reason :
                                         </span>
-                                        <p className="text-sm text-red-600 dark:text-red-400 my-2 font-medium">
+                                        <p className="text-sm text-red-600 my-2 font-medium">
                                             {data.rejection_reason}
                                         </p>
+                                        <span className='text-red-600 text-sm'>
+                                            Please update your documents and resubmit for verification
+                                        </span>
                                         <div className="mt-4">
                                             <Button
                                                 onClick={() => {

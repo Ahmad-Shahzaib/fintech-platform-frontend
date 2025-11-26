@@ -15,12 +15,12 @@ export default function KycModalLauncher() {
     const kycStatus = useAppSelector((state) => state.kycStatus);
     const kycStatusData = kycStatus?.data ?? null;
 
-    // Ye naya logic hai - rejected ko allow karo lekin approved ko block
-    const isKycApproved = kycStatusData?.status === 'approved'; // ← apne backend ke exact status se match karna
-    const isKycRejected = kycStatusData?.status === 'rejected'; // ya 'denied', 'failed' etc. jo bhi ho
-
-    // Sirf tab submitted mana jayega jab approved ho, rejected ho to modal dikhega
-    const isSubmitted = isKycApproved || (submissionData && !isKycRejected);
+    const isKycApproved = kycStatusData?.status === 'approved';
+    const isKycRejected = kycStatusData?.status === 'rejected';
+    const isKycPending = kycStatusData?.status === 'pending' || kycStatusData?.status === 'processing';
+    
+    // Agar submission data hai (user ne submit kiya) AUR rejected nahi - matlab submitted hai
+    const isKycSubmitted = (submissionData || kycStatusData) && !isKycRejected;
 
     const [show, setShow] = useState(false);
     const pathname = usePathname();
@@ -29,18 +29,26 @@ export default function KycModalLauncher() {
     const { isAuthenticated, isLoading: authLoading, user } = useAuth();
     const dispatch = useAppDispatch();
 
-    // Check if user should see KYC modal
+    // Modal sirf 2 cases mein dikhana:
+    // 1. KYC submit nahi kiya (no submission & no status)
+    // 2. KYC rejected hai
     const shouldShowKycModal = () => {
         if (!isAuthenticated || user?.role !== UserRole.USER) return false;
-        if (isKycApproved) return false;
+        
+        // Agar submitted hai (approved, pending, ya koi bhi submission jo rejected nahi) to modal NAHI
+        if (isKycSubmitted) return false;
 
-        // Special Case: Rejected user on /kyc-status page → NO MODAL
+        // Agar rejected hai BUT /kyc-status page par hai to modal NAHI dikhana
         if (isKycRejected && pathname === '/kyc-status') {
             return false;
         }
 
-        // Har aur jagah (including rejected on other pages) → Show modal
-        return true;
+        // Agar koi submission/status nahi (not submitted) YA rejected hai → Show modal
+        if ((!submissionData && !kycStatusData) || isKycRejected) {
+            return true;
+        }
+
+        return false;
     };
 
     // Effect for initial check (login time)
@@ -82,9 +90,9 @@ export default function KycModalLauncher() {
         }
     }, [pathname, isAuthenticated, user?.role, kycStatusData, isKycApproved]);
 
-    // Jab KYC approved ho jaye ya rejected na rahe tab hide karo
+    // Jab KYC submit ho jaye (approved, pending, ya koi bhi) to hide karo
     useEffect(() => {
-        if (isKycApproved) {
+        if (isKycSubmitted) {
             setShow(false);
             try {
                 if (typeof window !== 'undefined') sessionStorage.removeItem('kyc_modal');
@@ -92,7 +100,7 @@ export default function KycModalLauncher() {
                 // ignore
             }
         }
-    }, [isKycApproved]);
+    }, [isKycSubmitted]);
 
     // Logout par hide
     useEffect(() => {
@@ -112,7 +120,7 @@ export default function KycModalLauncher() {
         const handler = () => {
             try {
                 if (!isAuthenticated || user?.role !== UserRole.USER) return;
-                if (isKycApproved) return;
+                if (isKycSubmitted) return;
 
                 try {
                     sessionStorage.setItem('kyc_modal', '1');
@@ -126,10 +134,10 @@ export default function KycModalLauncher() {
 
         window.addEventListener('kyc_modal_open', handler as EventListener);
         return () => window.removeEventListener('kyc_modal_open', handler as EventListener);
-    }, [isAuthenticated, authLoading, user?.role, kycStatusData, isKycApproved]);
+    }, [isAuthenticated, authLoading, user?.role, isKycSubmitted]);
 
-    // Agar approved hai to kuch render nahi
-    if (isKycApproved) return null;
+    // Agar submitted hai (approved, pending, etc) to kuch render nahi
+    if (isKycSubmitted) return null;
     // Allow rendering when an explicit `show` is set (e.g. user clicked "Submit Your KYC").
     // Only block rendering when not explicitly requested AND general rules disallow it.
     if (!show && !shouldShowKycModal()) return null;
@@ -149,7 +157,7 @@ export default function KycModalLauncher() {
                                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                                     {isKycRejected ? 'KYC Rejected – Please Resubmit' : 'Identity Verification'}
                                 </h3>
-                                <p className="text-xs text-gray-500">
+                                <p className="text-lg text-red-600 text-center  ">
                                     {isKycRejected
                                         ? 'Your previous submission was rejected. Please review and submit again.'
                                         : 'Complete your KYC to unlock full access'}
