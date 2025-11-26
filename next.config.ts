@@ -2,7 +2,12 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: {
-    domains: ["fintechapi.softsuitetech.com"],
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "fintechapi.softsuitetech.com",
+      },
+    ],
   },
 
   webpack(config) {

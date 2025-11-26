@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import type { AppDispatch, RootState } from '@/redux/store';
+import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { fetchTopUps } from '@/redux/thunk/topUpsThunks';
 import { X, ExternalLink, Copy, Check } from 'lucide-react';
 
@@ -22,16 +21,16 @@ type TopUp = {
 
 const TopUpsDashboard = () => {
   const [selectedTopUp, setSelectedTopUp] = useState<TopUp | null>(null);
-  const dispatch = useDispatch<AppDispatch>();
+  const dispatch = useAppDispatch();
   // page and status for server pagination
   const [page, setPage] = useState<number>(1);
   const status = 'pending';
 
   // Read top-ups from redux store (server)
-  const topUpsItems = useSelector((s: RootState) => s.topUps?.items ?? []);
-  const pagination = useSelector((s: RootState) => s.topUps?.pagination ?? null);
-  const loading = useSelector((s: RootState) => s.topUps?.loading ?? false);
-  const error = useSelector((s: RootState) => s.topUps?.error ?? null);
+  const topUpsItems = useAppSelector((s) => s.topUps?.items ?? []);
+  const pagination = useAppSelector((s) => s.topUps?.pagination ?? null);
+  const loading = useAppSelector((s) => s.topUps?.loading ?? false);
+  const error = useAppSelector((s) => s.topUps?.error ?? null);
   const [copiedWallet, setCopiedWallet] = useState(false);
   const [copiedTxHash, setCopiedTxHash] = useState(false);
 
@@ -138,7 +137,7 @@ const TopUpsDashboard = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                {(topUpsItems || []).map((raw) => {
+                {(topUpsItems || []).map((raw: any) => {
                   // normalize server item to local TopUp type
                   const topUp: TopUp = {
                     id: raw.transaction_id ?? String(raw.id),

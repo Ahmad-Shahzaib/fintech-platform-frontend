@@ -1,11 +1,9 @@
 // pages/users.js
 import React, { useEffect, useState, useMemo } from 'react';
 import Head from 'next/head';
-import { useDispatch, useSelector } from 'react-redux';
+import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { fetchUsers } from '../../redux/slice/usersSlice';
 import { fetchUserDetail } from '../../redux/thunk/userThunks';
-import type { RootState } from '../../redux/rootReducer';
-import type { AppDispatch } from '../../redux/store';
 import axios from '../../lib/axios';
 
 type FormDataType = {
@@ -16,9 +14,9 @@ type FormDataType = {
 };
 
 const AddUserModalDetail = () => {
-    const dispatch = useDispatch<AppDispatch>();
-    const usersState = useSelector((state: RootState) => state.users || { users: [], loading: false });
-    const userDetailState = useSelector((state: RootState) => (state as any).userDetail || { data: null, loading: false });
+    const dispatch = useAppDispatch();
+    const usersState = useAppSelector((state) => state.users || { users: [], loading: false });
+    const userDetailState = useAppSelector((state) => (state as any).userDetail || { data: null, loading: false });
     const { loading } = usersState;
     const users = (() => {
         // normalize to an array in case the slice or API returned an object

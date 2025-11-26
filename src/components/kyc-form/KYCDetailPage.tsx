@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { ExternalLink, X, CheckCircle, XCircle, Clock } from "lucide-react";
-import { useDispatch, useSelector } from 'react-redux';
-import type { RootState } from '../../redux/rootReducer';
+import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import {
     fetchAdminPendingKyc,
     fetchAdminKycDetail,
@@ -38,9 +37,9 @@ interface KYC {
 export default function KYCPage() {
     const [selected, setSelected] = useState<KYC | null>(null);
     const [detailLoading, setDetailLoading] = useState(false);
-    const dispatch = useDispatch<any>();
+    const dispatch = useAppDispatch();
 
-    const { pendingList, pendingLoading, pendingError } = useSelector((state: RootState) => state.adminKyc);
+    const { pendingList, pendingLoading, pendingError } = useAppSelector((state) => state.adminKyc);
 
     useEffect(() => {
         // load first page of pending KYC on mount
@@ -98,7 +97,7 @@ export default function KYCPage() {
                                                     try {
                                                         const action = await dispatch(fetchAdminKycDetail(kyc.id));
                                                         if (action.type && action.type.endsWith('/fulfilled')) {
-                                                            const payload = action.payload?.data ?? action.payload;
+                                                            const payload: any = (action.payload as any)?.data ?? action.payload;
                                                             const mapped: KYC = {
                                                                 id: payload.id ?? kyc.id,
                                                                 user: { email: payload.user?.email ?? kyc.user?.email ?? '' },
@@ -124,7 +123,7 @@ export default function KYCPage() {
                                                         } else {
                                                             // rejected
                                                             // eslint-disable-next-line no-console
-                                                            console.error('Failed to load KYC detail', action.payload || action.error);
+                                                            console.error('Failed to load KYC detail', action.payload || (action as any).error);
                                                             alert('Failed to load KYC details.');
                                                         }
                                                     } catch (err) {

@@ -1,6 +1,6 @@
 "use client"
 import { useState, useMemo, useEffect } from "react"
-import { useDispatch, useSelector } from 'react-redux'
+import { useAppDispatch, useAppSelector } from '@/redux/hooks'
 import Image from "next/image"
 import { ChevronDown, Eye, Check, X, Search, Filter, Download, Clock, AlertCircle, CheckCircle, MoreVertical, ExternalLink, XCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -15,8 +15,6 @@ import {
     DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 
-import type { AppDispatch } from '@/redux/store'
-import type { RootState } from '@/redux/rootReducer'
 import { fetchAdminPendingKyc, approveAdminKyc, rejectAdminKyc, fetchAdminKycDetail } from '@/redux/thunk/adminKycThunks'
 
 interface KYCDetail {
@@ -54,9 +52,9 @@ interface KYCRequest {
 }
 
 export function KYCRequestsTable() {
-    const dispatch = useDispatch<AppDispatch>()
-    const adminPending = useSelector((state: RootState) => state.adminKyc?.pendingList ?? [])
-    const adminLoading = useSelector((state: RootState) => state.adminKyc?.pendingLoading ?? false)
+    const dispatch = useAppDispatch()
+    const adminPending = useAppSelector((state) => state.adminKyc?.pendingList ?? [])
+    const adminLoading = useAppSelector((state) => state.adminKyc?.pendingLoading ?? false)
 
     useEffect(() => {
         dispatch(fetchAdminPendingKyc())
@@ -147,7 +145,7 @@ export function KYCRequestsTable() {
         try {
             const action: any = await dispatch(fetchAdminKycDetail(rawId))
             if (action.type && action.type.endsWith('/fulfilled')) {
-                const payload = action.payload?.data ?? action.payload
+                const payload: any = (action.payload as any)?.data ?? action.payload
                 const mapped: KYCDetail = {
                     id: payload.id ?? rawId,
                     user: { email: payload.user?.email ?? '' },

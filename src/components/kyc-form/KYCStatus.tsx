@@ -1,15 +1,13 @@
 "use client"
 
 import React, { useEffect } from 'react'
-import { useDispatch, useSelector } from 'react-redux'
+import { useAppDispatch, useAppSelector } from '@/redux/hooks'
 import { fetchKycStatus } from '@/redux/thunk/kycStatusThunks'
-import type { AppDispatch } from '@/redux/store'
-import type { RootState } from '@/redux/rootReducer'
 import { Button } from '../ui/button'
 
 const KYCStatus = () => {
-    const dispatch = useDispatch<AppDispatch>()
-    const { data, loading, error } = useSelector((state: RootState) => state.kycStatus ?? { data: null, loading: false, error: null })
+    const dispatch = useAppDispatch()
+    const { data, loading, error } = useAppSelector((state) => state.kycStatus ?? { data: null, loading: false, error: null })
 
     useEffect(() => {
         dispatch(fetchKycStatus())

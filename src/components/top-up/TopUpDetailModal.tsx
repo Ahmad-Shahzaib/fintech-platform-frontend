@@ -1,6 +1,5 @@
 import React from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { RootState } from '@/redux/rootReducer';
+import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { clearAdminTopUpDetailState } from '@/redux/slice/adminTopUpDetailSlice';
 
 interface TopUpDetailModalProps {
@@ -10,8 +9,8 @@ interface TopUpDetailModalProps {
 }
 
 const TopUpDetailModal: React.FC<TopUpDetailModalProps> = ({ isOpen, onClose, topUpId }) => {
-    const dispatch = useDispatch();
-    const { data, loading, error } = useSelector((state: RootState) => state.adminTopUpDetail);
+    const dispatch = useAppDispatch();
+    const { data, loading, error } = useAppSelector((state) => state.adminTopUpDetail);
 
     const handleClose = () => {
         dispatch(clearAdminTopUpDetailState());

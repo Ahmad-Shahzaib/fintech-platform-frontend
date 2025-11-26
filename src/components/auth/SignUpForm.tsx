@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { useRouter } from 'next/navigation';
 import Checkbox from "@/components/form/input/Checkbox";
 import Input from "@/components/form/input/InputField";
@@ -8,8 +8,6 @@ import Label from "@/components/form/Label";
 import { EyeCloseIcon, EyeIcon } from "@/icons";
 import Link from "next/link";
 import { registerUser } from '@/redux/thunk/authThunk';
-import { AppDispatch } from '@/redux/store';
-import type { RootState } from '@/redux/rootReducer';
 import { clearError } from '@/redux/slice/authSlice';
 
 export default function SignUpForm() {
@@ -28,9 +26,9 @@ export default function SignUpForm() {
   const [countdown, setCountdown] = useState(10);
   const [validationErrors, setValidationErrors] = useState<{ [key: string]: string }>({});
 
-  const dispatch = useDispatch<AppDispatch>();
+  const dispatch = useAppDispatch();
   const router = useRouter();
-  const { isLoading, error } = useSelector((state: RootState) => state.auth);
+  const { isLoading, error } = useAppSelector((state) => state.auth);
 
   // Prevent body scrolling when modal is open
   useEffect(() => {

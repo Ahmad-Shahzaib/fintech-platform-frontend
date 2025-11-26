@@ -1,21 +1,20 @@
 "use client";
 import React, { useEffect, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { fetchPendingTopUps } from '@/redux/thunk/adminTopUpThunks';
 import { approveTopUp, rejectTopUp } from '@/redux/thunk/adminTopUpActionsThunks';
-import { RootState } from '@/redux/rootReducer';
 import { clearAdminTopUpState, clearActionMessages } from '@/redux/slice/adminTopUpsSlice';
 
 const AdminPendingTopUps: React.FC = () => {
-    const dispatch = useDispatch();
-    const { data, loading, error, actionLoading, actionError, actionSuccess } = useSelector((state: RootState) => state.adminTopUps);
+    const dispatch = useAppDispatch();
+    const { data, loading, error, actionLoading, actionError, actionSuccess } = useAppSelector((state) => state.adminTopUps);
     const [showRejectModal, setShowRejectModal] = useState(false);
     const [selectedTopUpId, setSelectedTopUpId] = useState<number | null>(null);
     const [rejectReason, setRejectReason] = useState('');
     const [rejectError, setRejectError] = useState('');
 
     useEffect(() => {
-        dispatch(fetchPendingTopUps());
+        dispatch(fetchPendingTopUps({ page: 1 }));
 
         return () => {
             dispatch(clearAdminTopUpState());
@@ -41,7 +40,7 @@ const AdminPendingTopUps: React.FC = () => {
     }, [actionError, dispatch]);
 
     const handleRefresh = () => {
-        dispatch(fetchPendingTopUps());
+        dispatch(fetchPendingTopUps({ page: 1 }));
     };
 
     const handleApprove = (id: number) => {

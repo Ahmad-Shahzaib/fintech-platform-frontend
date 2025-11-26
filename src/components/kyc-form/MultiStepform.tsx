@@ -3,11 +3,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import type { AppDispatch } from '@/redux/store';
+import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { resetKycState } from '@/redux/slice/kycSlice';
 import { submitKyc } from '@/redux/thunk/kycThunks';
-import { RootState } from '@/redux/rootReducer';
 
 const COUNTRY_OPTIONS = [
   { code: 'US', label: 'United States' },
@@ -63,15 +61,15 @@ export default function MultiStepForm() {
   const [cameraError, setCameraError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const router = useRouter();
-  const dispatch = useDispatch<AppDispatch>();
+  const dispatch = useAppDispatch();
 
   // Get KYC state from Redux
-  const { loading: isLoading, error, submission } = useSelector((state: RootState) => state.kyc);
+  const { loading: isLoading, error, submission } = useAppSelector((state) => state.kyc);
   const submissionData = submission?.data ?? null;
   const isSubmitted = Boolean(submissionData);
 
   // Get auth user (to prefill email) if available
-  const authUser = useSelector((state: RootState) => state.auth.user);
+  const authUser = useAppSelector((state) => state.auth.user);
 
   const [formData, setFormData] = useState<FormDataType>({
     // Personal Information

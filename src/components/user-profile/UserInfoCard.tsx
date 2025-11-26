@@ -1,8 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import type { RootState } from "../../redux/rootReducer";
-import type { AppDispatch } from "../../redux/store";
+import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { fetchUserProfile, updateUserProfile } from "../../redux/thunk/userProfileThunks"; // Updated import
 import { useModal } from "../../hooks/useModal";
 import { Modal } from "../ui/modal";
@@ -11,9 +9,9 @@ import Input from "../form/input/InputField";
 import Label from "../form/Label";
 
 export default function UserInfoCard() {
-  const dispatch = useDispatch<AppDispatch>();
+  const dispatch = useAppDispatch();
   const { isOpen, openModal, closeModal } = useModal();
-  const { data: userProfile, loading, error } = useSelector((state: RootState) => state.userProfile);
+  const { data: userProfile, loading, error } = useAppSelector((state) => state.userProfile);
 
   // Form state
   const [formData, setFormData] = useState({

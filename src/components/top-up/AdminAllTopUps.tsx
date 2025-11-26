@@ -1,16 +1,15 @@
 // components/AdminAllTopUps.tsx
 "use client";
 import React, { useEffect, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { fetchAllTopUps, AdminAllTopUpsQuery } from '@/redux/thunk/adminAllTopUpsThunks';
 import { fetchTopUpDetail } from '@/redux/thunk/adminTopUpDetailThunks';
-import { RootState } from '@/redux/rootReducer';
 import { clearAdminAllTopUpsState } from '@/redux/slice/adminAllTopUpsSlice';
 import TopUpDetailModal from './TopUpDetailModal';
 
 const AdminAllTopUps: React.FC = () => {
-    const dispatch = useDispatch();
-    const { data, loading, error } = useSelector((state: RootState) => state.adminAllTopUps);
+    const dispatch = useAppDispatch();
+    const { data, loading, error } = useAppSelector((state) => state.adminAllTopUps);
     const [filters, setFilters] = useState<AdminAllTopUpsQuery>({ page: 1, status: '' });
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedTopUpId, setSelectedTopUpId] = useState<number | null>(null);

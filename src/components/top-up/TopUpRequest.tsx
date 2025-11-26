@@ -1,8 +1,7 @@
 "use client";
 import { useState, useEffect, ChangeEvent, FormEvent } from 'react';
 import { AxiosError } from 'axios';
-import { useDispatch, useSelector } from 'react-redux';
-import type { AppDispatch, RootState } from '@/redux/store';
+import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { createTopUpRequest } from '@/redux/thunk/topUpThunks';
 import { fetchCurrencies } from '@/redux/thunk/currencyThunks';
 
@@ -43,9 +42,9 @@ export default function TopUpRequest() {
   });
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const dispatch = useDispatch<AppDispatch>();
+  const dispatch = useAppDispatch();
 
-  const currencies = useSelector((s: RootState) => s.currencies?.items ?? []);
+  const currencies = useAppSelector((s) => s.currencies?.items ?? []);
 
   useEffect(() => {
     if (!currencies.length) dispatch(fetchCurrencies());

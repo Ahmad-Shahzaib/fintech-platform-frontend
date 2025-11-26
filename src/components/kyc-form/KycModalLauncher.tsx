@@ -1,19 +1,18 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
+import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { useAuth } from '@/context/AuthContext';
 import { UserRole } from '@/types/auth';
 import MultiStepForm from './MultiStepform';
-import { RootState, AppDispatch } from '@/redux/store';
 import { fetchKycStatus } from '@/redux/thunk/kycStatusThunks';
 import { usePathname } from 'next/navigation';
 
 export default function KycModalLauncher() {
-    const { submission } = useSelector((state: RootState) => state.kyc);
+    const { submission } = useAppSelector((state) => state.kyc);
     const submissionData = submission?.data ?? null;
 
-    const kycStatus = useSelector((state: RootState) => state.kycStatus);
+    const kycStatus = useAppSelector((state) => state.kycStatus);
     const kycStatusData = kycStatus?.data ?? null;
 
     // Ye naya logic hai - rejected ko allow karo lekin approved ko block
@@ -28,7 +27,7 @@ export default function KycModalLauncher() {
     const previousPathname = useRef(pathname);
 
     const { isAuthenticated, isLoading: authLoading, user } = useAuth();
-    const dispatch = useDispatch<AppDispatch>();
+    const dispatch = useAppDispatch();
 
     // Check if user should see KYC modal
     const shouldShowKycModal = () => {

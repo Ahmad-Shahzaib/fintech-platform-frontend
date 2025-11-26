@@ -10,8 +10,7 @@ import Link from "next/link";
 import React, { useState } from "react";
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { useDispatch } from 'react-redux';
-import { AppDispatch } from '@/redux/store';
+import { useAppDispatch } from '@/redux/hooks';
 import { loginUser, resendVerification } from '@/redux/thunk/authThunk';
 import { clearError } from '@/redux/slice/authSlice';
 
@@ -25,7 +24,7 @@ export default function SignInForm() {
   const [isResending, setIsResending] = useState(false);
   const [resendMessage, setResendMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  const dispatch = useDispatch<AppDispatch>();
+  const dispatch = useAppDispatch();
   const router = useRouter();
   const { checkAuth } = useAuth();
 
