@@ -43,7 +43,7 @@ const KYCStatus = () => {
 
     return (
         <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
-            <div className="w-full max-w-md bg-white dark:bg-gray-800 rounded-net3xl shadow-sm overflow-hidden">
+            <div className="w-full max-w-3xl bg-white dark:bg-gray-800 rounded-3xl shadow-sm overflow-hidden">
                 <div className="p-8">
                     <div className="text-center text-gray-900 dark:text-gray-100">
                         {/* Status Icon */}
@@ -95,11 +95,11 @@ const KYCStatus = () => {
                                 {/* ==== REJECTION BLOCK – ONLY SHOW WHEN REJECTED ==== */}
                                 {data?.status === 'rejected' && data?.rejection_reason && (
                                     <div className="pt-4 mt-4 border-t border-gray-200 dark:border-gray-600 bg-red-200 rounded-lg p-4">
-                                        <span className="text-red-600 text-sm">
-                                            Your KYC verification has been rejected by the admin Reason :
+                                        <span className="text-red-600 text-sm ">
+                                            Your KYC verification has been rejected by the admin
                                         </span>
-                                        <p className="text-sm text-red-600 my-2 font-medium">
-                                            {data.rejection_reason}
+                                        <p className="text-xl text-red-600 font-semibold break-words">
+                                             Reason :{data.rejection_reason}
                                         </p>
                                         <span className='text-red-600 text-sm'>
                                             Please update your documents and resubmit for verification

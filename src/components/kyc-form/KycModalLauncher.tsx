@@ -18,9 +18,12 @@ export default function KycModalLauncher() {
     const isKycApproved = kycStatusData?.status === 'approved';
     const isKycRejected = kycStatusData?.status === 'rejected';
     const isKycPending = kycStatusData?.status === 'pending' || kycStatusData?.status === 'processing';
-    
-    // Agar submission data hai (user ne submit kiya) AUR rejected nahi - matlab submitted hai
-    const isKycSubmitted = (submissionData || kycStatusData) && !isKycRejected;
+
+    // Consider a KYC as "submitted" only when there is an explicit submission
+    // or when the status exists and is neither `not_submitted` nor `rejected`.
+    const isKycSubmitted = Boolean(submissionData) || Boolean(
+        kycStatusData && kycStatusData.status && kycStatusData.status !== 'not_submitted' && !isKycRejected
+    );
 
     const [show, setShow] = useState(false);
     const pathname = usePathname();
@@ -34,7 +37,7 @@ export default function KycModalLauncher() {
     // 2. KYC rejected hai
     const shouldShowKycModal = () => {
         if (!isAuthenticated || user?.role !== UserRole.USER) return false;
-        
+
         // Agar submitted hai (approved, pending, ya koi bhi submission jo rejected nahi) to modal NAHI
         if (isKycSubmitted) return false;
 
@@ -43,8 +46,9 @@ export default function KycModalLauncher() {
             return false;
         }
 
-        // Agar koi submission/status nahi (not submitted) YA rejected hai → Show modal
-        if ((!submissionData && !kycStatusData) || isKycRejected) {
+        // If status explicitly indicates `not_submitted` OR there is no submission/status (unknown),
+        // or KYC is rejected → Show modal
+        if (kycStatusData?.status === 'not_submitted' || (!submissionData && !kycStatusData) || isKycRejected) {
             return true;
         }
 
@@ -65,8 +69,13 @@ export default function KycModalLauncher() {
                 }
             }
 
-            const flag = sessionStorage.getItem('kyc_modal');
-            if (flag && shouldShowKycModal()) {
+            // Open modal automatically for users who need to complete KYC
+            if (shouldShowKycModal()) {
+                try {
+                    sessionStorage.setItem('kyc_modal', '1');
+                } catch (e) {
+                    // ignore
+                }
                 setShow(true);
             }
         } catch (e) {
@@ -81,8 +90,14 @@ export default function KycModalLauncher() {
 
         try {
             if (typeof window === 'undefined') return;
-            const flag = sessionStorage.getItem('kyc_modal');
-            if (flag && shouldShowKycModal()) {
+            // If the rules indicate the modal should be shown (not submitted or rejected),
+            // show it on route change as well (unless the user is on /kyc-status and rejected).
+            if (shouldShowKycModal()) {
+                try {
+                    sessionStorage.setItem('kyc_modal', '1');
+                } catch (e) {
+                    // ignore
+                }
                 setShow(true);
             }
         } catch (e) {
@@ -145,37 +160,62 @@ export default function KycModalLauncher() {
     if (!show) return null;
 
     return (
-        <div className="fixed inset-0 z-[99999] flex items-center justify-center">
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/40" />
-            <div className="relative w-full max-w-6xl mx-4 pointer-events-auto">
-                <div className="relative bg-white dark:bg-gray-900 rounded-3xl shadow-xl overflow-hidden border border-gray-100 dark:border-gray-800">
+            <div className="relative w-full max-w-6xl max-h-[95vh] flex flex-col pointer-events-auto">
+                <div className="relative bg-white dark:bg-gray-900 rounded-3xl shadow-xl overflow-hidden border border-gray-100 dark:border-gray-800 flex flex-col max-h-full">
                     <div className="absolute -inset-2 -z-10 rounded-3xl bg-gradient-to-r from-white/40 via-white/30 to-white/40 dark:from-gray-800/30" />
-                    <div className="flex items-start justify-between p-4 md:p-6 border-b border-gray-100 dark:border-gray-800">
-                        <div className="flex items-center space-x-3">
-                            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">K</div>
+                    <div className="border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
+                        <div className="flex items-start justify-between p-4 md:p-6">
+                            <div className="flex items-center space-x-3">
+                                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">K</div>
+                                <div>
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                                        {isKycRejected ? 'KYC Rejected – Please Resubmit' : 'Identity Verification'}
+                                    </h3>
+                                </div>
+                            </div>
                             <div>
-                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                    {isKycRejected ? 'KYC Rejected – Please Resubmit' : 'Identity Verification'}
-                                </h3>
-                                <p className="text-lg text-red-600 text-center  ">
-                                    {isKycRejected
-                                        ? 'Your previous submission was rejected. Please review and submit again.'
-                                        : 'Complete your KYC to unlock full access'}
-                                </p>
+                                <button
+                                    aria-label="Close KYC modal"
+                                    onClick={() => setShow(false)}
+                                    className="text-gray-500 hover:text-gray-800 dark:text-gray-300 px-3 py-1 rounded-md"
+                                >
+                                    ✕
+                                </button>
                             </div>
                         </div>
-                        <div>
-                            <button
-                                aria-label="Close KYC modal"
-                                onClick={() => setShow(false)}
-                                className="text-gray-500 hover:text-gray-800 dark:text-gray-300 px-3 py-1 rounded-md"
-                            >
-                                ✕
-                            </button>
+                        <div className="px-4 pb-4">
+                            <div className="flex flex-col items-center">
+                                <div className="text-md text-red-600 text-center bg-red-200 dark:bg-red-900/30 px-6 py-2 rounded-lg w-1/2">
+                                    {isKycRejected ? (
+                                        <>
+                                            <p className="break-words">
+                                               Your KYC verification has been rejected by the admin.
+                                            </p>
+                                            {kycStatusData?.rejection_reason && (
+                                                <div className=" text-center dark:bg-red-900/20 px-4 rounded-lg border border-red-200 dark:border-red-800">
+                                                    <p className="text-xl font-semibold text-red-600 break-words">
+                                                        <span className="text-xl font-semibold">Reason: </span>
+                                                        {kycStatusData.rejection_reason}
+                                                    </p>
+                                                </div>
+                                            )}
+                                            <p className="break-words">
+                                                Please update your documents and resubmit for verification.
+                                            </p>
+                                        </>
+                                    ) : (
+                                        <p className="break-words">
+                                            Complete your KYC to unlock full access
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <div className="max-h-[calc(100vh-8rem)] overflow-auto bg-white dark:bg-gray-900">
+                    <div className="flex-1 overflow-auto bg-white dark:bg-gray-900 min-h-0">
                         <MultiStepForm />
                     </div>
                 </div>

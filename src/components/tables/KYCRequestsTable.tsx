@@ -643,15 +643,16 @@ export function KYCRequestsTable() {
 
             {/* Approve Confirmation Modal */}
             {showApproveModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 ">
-                    <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div className="absolute inset-0 " />
+                    <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-2xl p-6 w-full max-w-md">
                         <h3 className="text-lg font-bold mb-4">Approve KYC</h3>
                         <p>Are you sure you want to approve this KYC request?</p>
                         <div className="flex justify-end space-x-3 mt-6">
                             <Button variant="outline" onClick={() => setShowApproveModal(false)}>
                                 Cancel
                             </Button>
-                            <Button className="bg-green-700  text-white" onClick={confirmApprove}>
+                            <Button className="bg-green-700 text-white" onClick={confirmApprove}>
                                 Yes, Approve
                             </Button>
                         </div>  
@@ -661,8 +662,8 @@ export function KYCRequestsTable() {
 
             {/* Reject Confirmation Modal */}
             {showRejectModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 ">
-                    <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 shadow-2xl  ">
+                    <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full shadow-2xl  max-w-md">
                         <h3 className="text-lg font-bold mb-4">Reject KYC</h3>
                         <p className="mb-2">Please provide a reason for rejection:</p>
                         <textarea
