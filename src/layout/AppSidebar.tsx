@@ -39,6 +39,16 @@ const navItems: NavItem[] = [
     name: "Manage User",
     path: "/manage-user",
   },
+  // get currency and network 
+  {
+    icon: <PieChartIcon />,
+    name: "Currency & Networks",
+    subItems: [
+      { name: "Manage Currency", path: "/manage-currency", pro: false },
+      { name: "Manage Networks", path: "/manage-networks", pro: false },
+    ],
+
+  },
   {
     icon: <MagnetIcon />,
     name: "Manage TopUps",

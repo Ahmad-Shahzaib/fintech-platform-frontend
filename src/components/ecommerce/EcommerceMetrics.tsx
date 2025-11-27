@@ -79,7 +79,7 @@ export const EcommerceMetrics = () => {
     },
     {
       name: "kyc Status",
-      price: "$2,567.00",
+      price: "Approved",
       change: 11.01,
     },
   ];
