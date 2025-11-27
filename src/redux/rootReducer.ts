@@ -15,6 +15,7 @@ import adminTopUpsReducer from './slice/adminTopUpsSlice';
 import adminAllTopUpsReducer from './slice/adminAllTopUpsSlice';
 import adminTopUpDetailReducer from './slice/adminTopUpDetailSlice';
 import networksReducer from './slice/networksSlice';
+import currencyNetworksReducer from './slice/currencyNetworksSlice';
 
 // New reducer
 
@@ -34,6 +35,7 @@ const rootReducer = combineReducers({
   adminAllTopUps: adminAllTopUpsReducer,
   adminTopUpDetail: adminTopUpDetailReducer,
   networks: networksReducer,
+  currencyNetworks: currencyNetworksReducer,
   
 
 

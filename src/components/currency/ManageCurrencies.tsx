@@ -1,7 +1,8 @@
 "use client";
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchCurrencies } from '@/redux/thunk/currencyThunks';
+import { fetchCurrencies, addCurrency, updateCurrency } from '@/redux/thunk/currencyThunks';
+import CurrencyDetailModal from './CurrencyDetailModal';
 import { RootState, AppDispatch } from '@/redux/store';
 import { Skeleton } from '../ui/skeleton';
 import { Button } from '../ui/button';
@@ -32,17 +33,41 @@ const ManageCurrencies = () => {
         (state: RootState) => state.currencies
     );
     const currencies = (items || []) as Currency[];
-    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [modalMode, setModalMode] = useState<null | 'add' | 'edit'>(null);
+    const [selectedCurrency, setSelectedCurrency] = useState<Currency | null>(null);
+    const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+    const [detailOpen, setDetailOpen] = useState(false);
+    const [detailId, setDetailId] = useState<number | null>(null);
 
     useEffect(() => {
         dispatch(fetchCurrencies());
     }, [dispatch]);
 
     const handleAddCurrency = (currencyData: any) => {
-        // Here you would typically dispatch an action to add the currency
-        console.log('Adding currency:', currencyData);
-        // After successful addition, you might want to refresh the list
-        dispatch(fetchCurrencies());
+        // Dispatch addCurrency thunk, then refresh list on success
+        (async () => {
+            try {
+                await dispatch(addCurrency(currencyData));
+                setModalMode(null);
+                // Refresh to ensure latest data (optional if backend returns full object)
+                dispatch(fetchCurrencies());
+            } catch (err) {
+                console.error('Failed to add currency', err);
+            }
+        })();
+    };
+
+    const handleUpdateCurrency = (id: number, currencyData: any) => {
+        (async () => {
+            try {
+                await dispatch(updateCurrency({ id, payload: currencyData }));
+                setModalMode(null);
+                setSelectedCurrency(null);
+                dispatch(fetchCurrencies());
+            } catch (err) {
+                console.error('Failed to update currency', err);
+            }
+        })();
     };
 
     if (error) {
@@ -74,7 +99,7 @@ const ManageCurrencies = () => {
         <div className="container mx-auto px-4 py-8">
             <Button 
                 className='float-right mb-4' 
-                onClick={() => setIsModalOpen(true)}
+                onClick={() => { setSelectedCurrency(null); setModalMode('add'); }}
             >
                 Add New Currency
             </Button>
@@ -97,7 +122,7 @@ const ManageCurrencies = () => {
                                 Decimals
                             </th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Networks
+                                Action
                             </th>
                         </tr>
                     </thead>
@@ -157,25 +182,44 @@ const ManageCurrencies = () => {
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                         {currency.decimals}
                                     </td>
-                                    <td className="px-6 py-4 text-sm text-gray-500">
-                                        <div className="space-y-2">
-                                            {currency.networks.map((network: Network) => (
-                                                <div key={network.id} className="bg-gray-50 p-3 rounded-md">
-                                                    <div className="flex justify-between items-center mb-1">
-                                                        <span className="font-medium">{network.name}</span>
-                                                        <span className="text-green-600 font-medium">
-                                                            ${network.network_fee_estimate_aud}
-                                                        </span>
-                                                    </div>
-                                                    {network.contract_address && (
-                                                        <div className="text-xs text-gray-500 mt-1">
-                                                            <span className="font-mono bg-gray-100 px-2 py-1 rounded">
-                                                                {truncateAddress(network.contract_address)}
-                                                            </span>
-                                                        </div>
-                                                    )}
+                                    <td className="px-6 py-4 text-sm text-gray-500 relative">
+                                        <div>
+                                            <button
+                                                onClick={() => setOpenMenuId(openMenuId === currency.id ? null : currency.id)}
+                                                className="p-1 rounded hover:bg-gray-100"
+                                                aria-haspopup="true"
+                                                aria-expanded={openMenuId === currency.id}
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM18 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                                </svg>
+                                            </button>
+
+                                            {openMenuId === currency.id && (
+                                                <div className="absolute right-0 mt-2 w-32 bg-white border rounded shadow z-10">
+                                                    <button
+                                                        className="w-full text-left px-3 py-2 hover:bg-gray-50"
+                                                        onClick={() => {
+                                                            // Open detail modal and let the modal fetch data
+                                                            setDetailId(currency.id);
+                                                            setDetailOpen(true);
+                                                            setOpenMenuId(null);
+                                                        }}
+                                                    >
+                                                        View
+                                                    </button>
+                                                    <button
+                                                        className="w-full text-left px-3 py-2 hover:bg-gray-50"
+                                                        onClick={() => {
+                                                            setSelectedCurrency(currency);
+                                                            setModalMode('edit');
+                                                            setOpenMenuId(null);
+                                                        }}
+                                                    >
+                                                        Update
+                                                    </button>
                                                 </div>
-                                            ))}
+                                            )}
                                         </div>
                                     </td>
                                 </tr>
@@ -186,9 +230,22 @@ const ManageCurrencies = () => {
             </div>
             
             <AddCurrencyModal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                onSubmit={handleAddCurrency}
+                isOpen={modalMode !== null}
+                initialData={modalMode === 'edit' ? selectedCurrency ?? undefined : undefined}
+                submitLabel={modalMode === 'edit' ? 'Update Currency' : 'Add Currency'}
+                onClose={() => { setModalMode(null); setSelectedCurrency(null); }}
+                onSubmit={(data: any) => {
+                    if (modalMode === 'edit' && selectedCurrency) {
+                        handleUpdateCurrency(selectedCurrency.id, data);
+                    } else {
+                        handleAddCurrency(data);
+                    }
+                }}
+            />
+            <CurrencyDetailModal
+                isOpen={detailOpen}
+                id={detailId}
+                onClose={() => { setDetailOpen(false); setDetailId(null); }}
             />
         </div>
     );

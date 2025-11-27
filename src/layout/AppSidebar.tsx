@@ -44,8 +44,9 @@ const navItems: NavItem[] = [
     icon: <PieChartIcon />,
     name: "Currency & Networks",
     subItems: [
-      { name: "Manage Currency", path: "/manage-currency", pro: false },
+      { name: "Manage Currencies", path: "/manage-currency", pro: false },
       { name: "Manage Networks", path: "/manage-networks", pro: false },
+      { name: "Chain", path: "/currency-network", pro: false },
     ],
 
   },
