@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { EcommerceMetrics } from "@/components/ecommerce/EcommerceMetrics";
+import KycMetricsClient from '@/components/ecommerce/KycMetricsClient';
 import React from "react";
 import MonthlyTarget from "@/components/ecommerce/MonthlyTarget";
 import MonthlySalesChart from "@/components/ecommerce/MonthlySalesChart";
@@ -17,7 +17,7 @@ export default function Ecommerce() {
   return (
     <div className="grid grid-cols-12 gap-4 md:gap-6">
       <div className="col-span-12">
-        <EcommerceMetrics />
+        <KycMetricsClient />
       </div>
 
       {/* Other components can have their own col-span */}
@@ -37,9 +37,10 @@ export default function Ecommerce() {
         <DemographicCard />
       </div>
 
-      <div className="col-span-12 xl:col-span-7">
+      */}
+       <div className="col-span-12 xl:col-span-12">
         <RecentOrders />
-      </div> */}
+      </div>
     </div>
   );
 }

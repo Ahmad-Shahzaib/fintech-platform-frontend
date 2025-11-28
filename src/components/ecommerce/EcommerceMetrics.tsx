@@ -60,7 +60,18 @@ const getIcon = (name: string) => {
   }
 };
 
-export const EcommerceMetrics = () => {
+export const EcommerceMetrics = ({ kycStatus }: { kycStatus?: string | null }) => {
+  const kycDisplay = kycStatus ? (kycStatus.charAt(0).toUpperCase() + kycStatus.slice(1)) : 'Not Submitted';
+
+  const kycStatusNormalized = kycStatus ? kycStatus.toLowerCase() : 'not_submitted';
+
+  const kycPill = () => {
+    const base = 'inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold';
+    if (kycStatusNormalized === 'approved') return <span className={`${base} bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400`}>{kycDisplay}</span>;
+    if (kycStatusNormalized === 'rejected') return <span className={`${base} bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400`}>{kycDisplay}</span>;
+    return <span className={`${base} bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400`}>{kycDisplay}</span>;
+  };
+
   const cryptos = [
     {
       name: "Total Topup Amount",
@@ -78,9 +89,10 @@ export const EcommerceMetrics = () => {
       change: 11.01,
     },
     {
-      name: "kyc Status",
-      price: "Approved",
-      change: 11.01,
+      name: "KYC Status",
+      // price will be rendered from prop
+      price: kycDisplay,
+      change: null,
     },
   ];
 
@@ -103,14 +115,21 @@ export const EcommerceMetrics = () => {
             </div>
           </div>
 
-          {/* Price + Change */}
+          {/* Price + Change / Status */}
           <div className="flex items-end justify-between mt-6">
             <div>
               <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
                 {crypto.price}
               </h4>
             </div>
-            <ChangeBadge value={crypto.change} />
+            <div>
+              {crypto.name === 'KYC Status' ? (
+                // render status pill based on prop
+                kycPill()
+              ) : (
+                <ChangeBadge value={crypto.change ?? 0} />
+              )}
+            </div>
           </div>
         </div>
       ))}

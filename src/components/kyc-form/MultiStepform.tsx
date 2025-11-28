@@ -115,6 +115,8 @@ export default function MultiStepForm() {
   }, [previews]);
 
   const [clientError, setClientError] = useState<string | null>(null);
+  // DOB validation error (must be 18+)
+  const [dobError, setDobError] = useState<string | null>(null);
 
   // Handle form submission using Redux thunk
   const handleSubmit = (e: React.FormEvent) => {
@@ -207,6 +209,8 @@ export default function MultiStepForm() {
     const target = e.target as HTMLInputElement;
     const { name, value, type } = target;
     const checked = (target as HTMLInputElement).checked;
+    // Clear any client-side error when user starts editing fields
+    if (clientError) setClientError(null);
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
@@ -273,6 +277,9 @@ export default function MultiStepForm() {
         }
       }));
 
+      // Clear any client side error once user uploads files
+      if (clientError) setClientError(null);
+
       setPreviews(prev => {
         // Revoke the old preview URL if it exists
         if (prev[docType]) {
@@ -288,7 +295,68 @@ export default function MultiStepForm() {
     }
   };
 
+  // Validate the current step before moving forward
+  const validateStep = (step: number) => {
+    const missing: string[] = [];
+    if (step === 1) {
+      if (!formData.fullName.trim()) missing.push('Full name');
+      if (!formData.dateOfBirth) missing.push('Date of birth');
+      if (dobError) missing.push('Valid date of birth (18+ required)');
+      if (!formData.address.trim()) missing.push('Address');
+      if (!formData.city.trim()) missing.push('City');
+      if (!formData.postalCode.trim()) missing.push('Postal code');
+      if (!formData.phoneNumber.trim()) missing.push('Phone number');
+      if (!formData.email.trim()) missing.push('Email');
+    }
+
+    if (step === 2) {
+      if (!formData.documents.front) missing.push('Front document');
+      if (formData.documentType !== 'passport' && !formData.documents.back) missing.push('Back document');
+    }
+
+    if (step === 3) {
+      if (!formData.documents.selfie) missing.push('Selfie');
+    }
+
+    if (missing.length > 0) {
+      setClientError(`Please complete the following before proceeding: ${missing.join(', ')}`);
+      return false;
+    }
+    setClientError(null);
+    return true;
+  };
+
+  // Pure check whether a step is complete (no side-effects)
+  const isStepValid = (step: number) => {
+    if (step === 1) {
+      return (
+        Boolean(formData.fullName.trim()) &&
+        Boolean(formData.dateOfBirth) &&
+        !dobError &&
+        Boolean(formData.address.trim()) &&
+        Boolean(formData.city.trim()) &&
+        Boolean(formData.postalCode.trim()) &&
+        Boolean(formData.phoneNumber.trim()) &&
+        Boolean(formData.email.trim())
+      );
+    }
+
+    if (step === 2) {
+      if (!formData.documents.front) return false;
+      if (formData.documentType !== 'passport' && !formData.documents.back) return false;
+      return true;
+    }
+
+    if (step === 3) {
+      return Boolean(formData.documents.selfie);
+    }
+
+    return true;
+  };
+
   const nextStep = () => {
+    // Validate current step before advancing
+    if (!validateStep(currentStep)) return;
     if (currentStep < 5) setCurrentStep(currentStep + 1);
   };
 
@@ -425,6 +493,12 @@ export default function MultiStepForm() {
 
         {/* Form Content */}
         <div className="p-4 md:p-8 pt-4 md:pt-6">
+          {/* Client side validation errors shown here for all steps */}
+          {clientError && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-center mb-4">
+              <p className="text-red-600 text-sm">{clientError}</p>
+            </div>
+          )}
           {/* Step 1: Basic Personal Information */}
           {currentStep === 1 && (
             <div className="space-y-6">
@@ -459,6 +533,21 @@ export default function MultiStepForm() {
                           if (selectedDates && selectedDates.length > 0) {
                             const date = selectedDates[0];
                             const formattedDate = date.toISOString().split('T')[0];
+
+                            // Calculate age precisely
+                            const now = new Date();
+                            let age = now.getFullYear() - date.getFullYear();
+                            const monthDiff = now.getMonth() - date.getMonth();
+                            if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < date.getDate())) {
+                              age--;
+                            }
+
+                            if (age < 18) {
+                              setDobError('You must be 18 years or older');
+                            } else {
+                              setDobError(null);
+                            }
+
                             setFormData(prev => ({
                               ...prev,
                               dateOfBirth: formattedDate
@@ -466,6 +555,9 @@ export default function MultiStepForm() {
                           }
                         }}
                       />
+                      {dobError && (
+                        <p className="text-xs text-red-600 mt-2">{dobError}</p>
+                      )}
                     </div>
                     <div>
                       <label className="block text-sm font-semibold text-gray-900 mb-2">
@@ -549,6 +641,7 @@ export default function MultiStepForm() {
                     <input
                       type="email"
                       name="email"
+                      readOnly
                       value={formData.email}
                       onChange={handleInputChange}
                       placeholder="e.g. you@example.com"
@@ -560,7 +653,8 @@ export default function MultiStepForm() {
 
               <button
                 onClick={nextStep}
-                className="w-full py-3.5 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 transition-colors flex items-center justify-center space-x-2"
+                disabled={!isStepValid(1)}
+                className={`w-full py-3.5 text-sm font-medium rounded-xl transition-colors flex items-center justify-center space-x-2 ${!isStepValid(1) ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-500 text-white hover:bg-blue-600'}`}
               >
                 <span>Next Step</span>
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -706,7 +800,8 @@ export default function MultiStepForm() {
                 </button>
                 <button
                   onClick={nextStep}
-                  className="flex-1 py-3.5 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 transition-colors flex items-center justify-center space-x-2"
+                  disabled={!isStepValid(2)}
+                  className={`flex-1 py-3.5 text-sm font-medium rounded-xl transition-colors flex items-center justify-center space-x-2 ${!isStepValid(2) ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-500 text-white hover:bg-blue-600'}`}
                 >
                   <span>Next Step</span>
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -901,8 +996,8 @@ export default function MultiStepForm() {
                 </button>
                 <button
                   onClick={nextStep}
-                  disabled={!formData.documents.selfie}
-                  className={`flex-1 py-3.5 rounded-xl text-sm font-medium transition-colors flex items-center justify-center space-x-2 ${formData.documents.selfie ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
+                  disabled={!isStepValid(3)}
+                  className={`flex-1 py-3.5 rounded-xl text-sm font-medium transition-colors flex items-center justify-center space-x-2 ${!isStepValid(3) ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-500 text-white hover:bg-blue-600'}`}
                 >
                   <span>Next Step</span>
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

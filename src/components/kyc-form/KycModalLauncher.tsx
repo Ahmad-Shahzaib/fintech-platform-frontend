@@ -186,20 +186,20 @@ export default function KycModalLauncher() {
                             </div>
                         </div>
                         <div className="px-4 pb-4">
-                            <div className="flex flex-col items-center">
-                                <div className="text-md text-red-600 text-center bg-red-200 dark:bg-red-900/30 px-6 py-2 rounded-lg w-1/2">
+                            <div className="flex flex-col items-center px-4">
+                                    <div className="text-sm sm:text-base text-red-600 text-center bg-red-200 dark:bg-red-900/30 px-4  sm:px-6 sm:py-3 rounded-lg w-full sm:w-3/4 md:w-1/2">
                                     {isKycRejected ? (
                                         <>
                                             <p className="break-words">
                                                Your KYC verification has been rejected by the admin.
                                             </p>
                                             {kycStatusData?.rejection_reason && (
-                                                <div className=" text-center dark:bg-red-900/20 px-4 rounded-lg border border-red-200 dark:border-red-800">
-                                                    <p className="text-xl font-semibold text-red-600 break-words">
-                                                        <span className="text-xl font-semibold">Reason: </span>
-                                                        {kycStatusData.rejection_reason}
-                                                    </p>
-                                                </div>
+                                                    <div className="w-full  text-left sm:text-center dark:bg-red-900/20 px-3 sm:px-4 rounded-lg border border-red-200 dark:border-red-800">
+                                                        <p className="text-sm sm:text-base font-semibold text-red-600 break-words">
+                                                            <span className="font-semibold">Reason: </span>
+                                                            {kycStatusData.rejection_reason}
+                                                        </p>
+                                                    </div>
                                             )}
                                             <p className="break-words">
                                                 Please update your documents and resubmit for verification.
