@@ -9,7 +9,7 @@ export interface TopUpsQuery {
 
 export const fetchTopUps = createAsyncThunk(
     'topups/fetchList',
-    async (params: TopUpsQuery = { status: 'pending', page: 1 }, { rejectWithValue }) => {
+    async (params: TopUpsQuery = { status: '', page: 1 }, { rejectWithValue }) => {
         try {
             const query = new URLSearchParams();
             if (params.status) query.set('status', params.status);

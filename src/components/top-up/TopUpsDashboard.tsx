@@ -24,7 +24,8 @@ const TopUpsDashboard = () => {
   const dispatch = useAppDispatch();
   // page and status for server pagination
   const [page, setPage] = useState<number>(1);
-  const status = 'pending';
+  // Empty status will request all top-ups (no server status filter)
+  const status = '';
 
   // Read top-ups from redux store (server)
   const topUpsItems = useAppSelector((s) => s.topUps?.items ?? []);
@@ -35,7 +36,7 @@ const TopUpsDashboard = () => {
   const [copiedTxHash, setCopiedTxHash] = useState(false);
 
   useEffect(() => {
-    // load top-ups from API via redux
+    // load top-ups from API via redux (status empty => all)
     dispatch(fetchTopUps({ status, page }));
 
     const onAdded = (e: Event) => {
@@ -45,7 +46,7 @@ const TopUpsDashboard = () => {
 
     window.addEventListener('topup:added', onAdded as EventListener);
     return () => window.removeEventListener('topup:added', onAdded as EventListener);
-  }, [dispatch, page]);
+  }, [dispatch, page, status]);
 
   // Copy helpers
   const copyToClipboard = async (text: string, onCopied: (v: boolean) => void) => {
