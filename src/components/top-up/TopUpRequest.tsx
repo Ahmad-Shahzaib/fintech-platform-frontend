@@ -185,7 +185,7 @@ export default function TopUpRequest() {
         setFormData({ ...formData, amount: '', walletAddress: '', confirmAddress: '', acceptDisclaimer: false });
         setFees({ networkFee: 0, exchangeFee: 0, cryptoAmount: 0, totalReceive: 0 });
         setErrors({});
-        alert('Top-up request submitted successfully!');
+        // alert('Top-up request submitted successfully!');
       } else {
         // rejected
         setIsSubmitting(false);

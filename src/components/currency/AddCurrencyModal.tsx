@@ -87,7 +87,7 @@ const AddCurrencyModal: React.FC<AddCurrencyModalProps> = ({ isOpen, onClose, on
 
   return (
     <div className="fixed inset-0  flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl p-6 max-h-[80vh] overflow-y-auto">
+      <div className="bg-white rounded-lg shadow-2xl w-full max-w-3xl p-6 max-h-[80vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold text-gray-800">{submitLabel ?? (initialData ? 'Edit Currency' : 'Add New Currency')}</h2>
           <Button variant="ghost" onClick={onClose} className="text-gray-500 hover:text-gray-700">
