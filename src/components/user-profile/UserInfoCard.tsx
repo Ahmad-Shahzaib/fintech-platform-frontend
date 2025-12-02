@@ -66,6 +66,17 @@ export default function UserInfoCard() {
     );
   };
 
+  const renderKycStatus = () => {
+    if (loading) return 'Loading...';
+    const raw = userProfile?.kyc_status;
+    const display = raw && typeof raw === 'string' && raw.length > 0 ? (raw.charAt(0).toUpperCase() + raw.slice(1)) : 'Not available';
+    const norm = raw && typeof raw === 'string' ? raw.toLowerCase() : 'not_available';
+    const base = 'inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold';
+    if (norm === 'approved') return <span className={`${base} bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400`}>{display}</span>;
+    if (norm === 'rejected') return <span className={`${base} bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400`}>{display}</span>;
+    return <span className={`${base} bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400`}>{display}</span>;
+  };
+
   return (
     <div className="p-5 border border-gray-200 rounded-2xl dark:border-gray-800 lg:p-6">
       {renderError()}
@@ -109,7 +120,7 @@ export default function UserInfoCard() {
                 KYC Status
               </p>
               <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                {loading ? 'Loading...' : (userProfile?.kyc_status || 'Not available')}
+                {renderKycStatus()}
               </p>
             </div>
           </div>

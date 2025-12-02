@@ -2,6 +2,8 @@
 
 import React from "react";
 import { ArrowUpIcon, ArrowDownIcon } from "@/icons"; // Assuming you have these
+import { useAuth } from "@/context/AuthContext";
+import { UserRole } from "@/types/auth";
 
 // Simple badge component (you can replace with your existing Badge if preferred)
 const ChangeBadge = ({ value }: { value: number }) => {
@@ -33,7 +35,19 @@ const getIcon = (name: string) => {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       );
+    case "Total User":
+      return (
+        <svg className="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      );
     case "Total Repayments":
+      return (
+        <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+        </svg>
+      );
+    case "Total Currencies":
       return (
         <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
@@ -45,7 +59,19 @@ const getIcon = (name: string) => {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
         </svg>
       );
-    case "kyc Status":
+    case "Top Ups Request":
+      return (
+        <svg className="w-8 h-8 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+        </svg>
+      );
+    case "KYC Status":
+      return (
+        <svg className="w-8 h-8 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
+        </svg>
+      );
+    case "KYC Pending Approvals":
       return (
         <svg className="w-8 h-8 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
@@ -60,7 +86,7 @@ const getIcon = (name: string) => {
   }
 };
 
-export const EcommerceMetrics = ({ kycStatus }: { kycStatus?: string | null }) => {
+export const EcommerceMetrics = ({ kycStatus, isAdmin }: { kycStatus?: string | null; isAdmin?: boolean }) => {
   const kycDisplay = kycStatus ? (kycStatus.charAt(0).toUpperCase() + kycStatus.slice(1)) : 'Not Submitted';
 
   const kycStatusNormalized = kycStatus ? kycStatus.toLowerCase() : 'not_submitted';
@@ -72,7 +98,18 @@ export const EcommerceMetrics = ({ kycStatus }: { kycStatus?: string | null }) =
     return <span className={`${base} bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400`}>{kycDisplay}</span>;
   };
 
-  const cryptos = [
+  // detect admin from auth context unless explicitly provided via prop
+  const { user } = (() => {
+    try {
+      return useAuth();
+    } catch (e) {
+      return { user: null } as any;
+    }
+  })();
+
+  const resolvedIsAdmin = typeof isAdmin === 'boolean' ? isAdmin : (user?.role === UserRole.ADMIN);
+
+  const userCards = [
     {
       name: "Total Topup Amount",
       price: "$1,232.00",
@@ -96,8 +133,18 @@ export const EcommerceMetrics = ({ kycStatus }: { kycStatus?: string | null }) =
     },
   ];
 
+  const adminCards = [
+    { name: "Total User", price: "0", change: null },
+    { name: "Total Currencies", price: "0", change: null },
+    { name: "Total Networks", price: "0", change: null },
+    { name: "Top Ups Request", price: "0", change: null },
+    { name: "KYC Pending Approvals", price: "0", change: null },
+  ];
+
+  const cryptos = resolvedIsAdmin ? adminCards : userCards;
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+    <div className={resolvedIsAdmin ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6" : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6"}>
       {cryptos.map((crypto) => (
         <div
           key={crypto.name}
@@ -127,8 +174,12 @@ export const EcommerceMetrics = ({ kycStatus }: { kycStatus?: string | null }) =
                 // render status pill based on prop
                 kycPill()
               ) : (
-                <ChangeBadge value={crypto.change ?? 0} />
+                // only show change badge when a numeric change is provided
+                crypto.change != null ? <ChangeBadge value={crypto.change} /> : null
               )}
+              {
+                // For admin cards we keep values simple (rendered as price above). No extra badge is shown when change is null.
+              }
             </div>
           </div>
         </div>
