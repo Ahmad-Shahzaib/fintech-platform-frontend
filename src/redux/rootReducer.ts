@@ -20,6 +20,7 @@ import currencyNetworkDetailReducer from './slice/currencyNetworkSlice';
 import currencyNetworkCreateReducer from './slice/currencyNetworkCreateSlice';
 import currencyNetworkUpdateReducer from './slice/currencyNetworkUpdateSlice';
 import updatePasswordReducer from './slice/updatePasswordSlice';
+import submitPaymentReducer from './slice/submitPaymentSlice';
 
 // New reducer
 
@@ -44,6 +45,7 @@ const rootReducer = combineReducers({
   currencyNetworkCreate: currencyNetworkCreateReducer,
   currencyNetworkUpdate: currencyNetworkUpdateReducer,
   updatePassword: updatePasswordReducer,
+  submitPayment: submitPaymentReducer,
   
 
 

@@ -88,22 +88,22 @@ export default function UpdateCurrencyNetworkModal({ open, onClose, id }: { open
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 " onClick={onClose} />
-      <div className="relative bg-white rounded-lg shadow-2xl w-[95%] max-w-2xl p-6 z-10">
+      <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-[95%] max-w-2xl p-6 z-10">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">Update Currency & Network</h3>
-          <button onClick={onClose} className="text-sm text-gray-500">Close</button>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Update Currency & Network</h3>
+          <button onClick={onClose} className="text-sm text-gray-500 dark:text-gray-300">Close</button>
         </div>
 
         {detailState.loading ? (
-          <div className="py-6 text-center">Loading...</div>
+          <div className="py-6 text-center text-gray-600 dark:text-gray-300">Loading...</div>
         ) : detailState.error ? (
-          <div className="py-6 text-center text-red-500">{detailState.error}</div>
+          <div className="py-6 text-center text-red-500 dark:text-red-400">{detailState.error}</div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <label className="block">
-                <div className="text-xs text-gray-600">Currency</div>
-                <select name="currency_id" value={form.currency_id} onChange={handleChange} className="mt-1 w-full border rounded px-2 py-1">
+                <div className="text-xs text-gray-600 dark:text-gray-400">Currency</div>
+                <select name="currency_id" value={form.currency_id} onChange={handleChange} className="mt-1 w-full border rounded px-2 py-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 border-gray-300 dark:border-gray-600">
                   <option value="">Select currency</option>
                   {currencies.map((c: any) => (
                     <option key={c.id} value={c.id}>{c.code} - {c.name}</option>
@@ -112,8 +112,8 @@ export default function UpdateCurrencyNetworkModal({ open, onClose, id }: { open
               </label>
 
               <label className="block">
-                <div className="text-xs text-gray-600">Network</div>
-                <select name="network_id" value={form.network_id} onChange={handleChange} className="mt-1 w-full border rounded px-2 py-1">
+                <div className="text-xs text-gray-600 dark:text-gray-400">Network</div>
+                <select name="network_id" value={form.network_id} onChange={handleChange} className="mt-1 w-full border rounded px-2 py-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 border-gray-300 dark:border-gray-600">
                   <option value="">Select network</option>
                   {networks.map((n: any) => (
                     <option key={n.id} value={n.id}>{n.code} - {n.name}</option>
@@ -124,32 +124,32 @@ export default function UpdateCurrencyNetworkModal({ open, onClose, id }: { open
 
             <div className="grid grid-cols-2 gap-3">
               <label className="block">
-                <div className="text-xs text-gray-600">Contract Address</div>
-                <input name="contract_address" value={form.contract_address} onChange={handleChange} className="mt-1 w-full border rounded px-2 py-1" />
+                <div className="text-xs text-gray-600 dark:text-gray-400">Contract Address</div>
+                <input name="contract_address" value={form.contract_address} onChange={handleChange} className="mt-1 w-full border rounded px-2 py-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 border-gray-300 dark:border-gray-600" />
               </label>
               <label className="block">
-                <div className="text-xs text-gray-600">Network Fee (AUD)</div>
-                <input name="network_fee_estimate_aud" value={form.network_fee_estimate_aud} onChange={handleChange} className="mt-1 w-full border rounded px-2 py-1" />
+                <div className="text-xs text-gray-600 dark:text-gray-400">Network Fee (AUD)</div>
+                <input name="network_fee_estimate_aud" value={form.network_fee_estimate_aud} onChange={handleChange} className="mt-1 w-full border rounded px-2 py-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 border-gray-300 dark:border-gray-600" />
               </label>
             </div>
 
             <div className="grid grid-cols-3 gap-3">
               <label className="block">
-                <div className="text-xs text-gray-600">Min Transaction</div>
-                <input name="min_transaction_amount" value={form.min_transaction_amount} onChange={handleChange} className="mt-1 w-full border rounded px-2 py-1" />
+                <div className="text-xs text-gray-600 dark:text-gray-400">Min Transaction</div>
+                <input name="min_transaction_amount" value={form.min_transaction_amount} onChange={handleChange} className="mt-1 w-full border rounded px-2 py-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 border-gray-300 dark:border-gray-600" />
               </label>
               <label className="block">
-                <div className="text-xs text-gray-600">Max Transaction</div>
-                <input name="max_transaction_amount" value={form.max_transaction_amount} onChange={handleChange} className="mt-1 w-full border rounded px-2 py-1" />
+                <div className="text-xs text-gray-600 dark:text-gray-400">Max Transaction</div>
+                <input name="max_transaction_amount" value={form.max_transaction_amount} onChange={handleChange} className="mt-1 w-full border rounded px-2 py-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 border-gray-300 dark:border-gray-600" />
               </label>
               <label className="flex items-center space-x-2">
                 <input type="checkbox" name="is_active" checked={form.is_active} onChange={handleChange as any} />
-                <span className="text-sm">Active</span>
+                <span className="text-sm text-gray-900 dark:text-gray-200">Active</span>
               </label>
             </div>
 
             <div className="flex justify-end space-x-2">
-              <Button type="button" onClick={onClose} className="bg-gray-100 text-gray-700">Cancel</Button>
+              <Button type="button" onClick={onClose} className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">Cancel</Button>
               <Button type="submit" className="bg-primary-600 text-white" disabled={updateState.loading}>{updateState.loading ? 'Saving...' : 'Save'}</Button>
             </div>
 

@@ -44,8 +44,8 @@ export default function UserSidebar() {
       path: "/repayments",
       icon: <BsCreditCard size={25} />,
       subItems: [
-        { name: "Make Payment", path: "/make-payment" },
-        { name: "Payment History", path: "/payment-history" },
+        { name: "Make Payment", path: "/create-payment" },
+        { name: "Payment History", path: "/payments-history" },
       ],
     },
 
@@ -54,8 +54,8 @@ export default function UserSidebar() {
       path: "/help-support",
       icon: <BiSupport size={25} />,
       subItems: [
-        { name: "FAQ", path: "/faq" },
-        { name: "Contact Support", path: "/contact-us" },
+        { name: "FAQ", path: "/faqs" },
+        { name: "Contact Support", path: "/support" },
       ],
     },
     // kyc-form 

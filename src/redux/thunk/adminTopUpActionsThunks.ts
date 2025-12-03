@@ -34,3 +34,48 @@ export const rejectTopUp = createAsyncThunk(
         }
     }
 );
+
+export const completeTopUp = createAsyncThunk(
+    'adminTopUps/complete',
+    async (
+        {
+            topUpId,
+            transaction_hash,
+            actual_crypto_sent,
+            admin_notes,
+        }: { topUpId: number; transaction_hash: string; actual_crypto_sent: number; admin_notes?: string },
+        { rejectWithValue }
+    ) => {
+        try {
+            const payload = { transaction_hash, actual_crypto_sent, admin_notes };
+            const response = await api.post(`/admin/topup/${topUpId}/complete`, payload);
+            return { id: topUpId, message: response.data.message };
+        } catch (err: any) {
+            if (axios.isAxiosError(err)) {
+                const message = err.response?.data?.message || err.message || 'Failed to complete top-up';
+                return rejectWithValue(message);
+            }
+            return rejectWithValue('Network error');
+        }
+    }
+);
+
+export const processTopUp = createAsyncThunk(
+    'adminTopUps/process',
+    async (
+        { topUpId, admin_notes }: { topUpId: number; admin_notes?: string },
+        { rejectWithValue }
+    ) => {
+        try {
+            const payload = { admin_notes };
+            const response = await api.post(`/admin/topup/${topUpId}/process`, payload);
+            return { id: topUpId, message: response.data.message };
+        } catch (err: any) {
+            if (axios.isAxiosError(err)) {
+                const message = err.response?.data?.message || err.message || 'Failed to start processing top-up';
+                return rejectWithValue(message);
+            }
+            return rejectWithValue('Network error');
+        }
+    }
+);

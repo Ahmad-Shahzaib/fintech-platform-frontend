@@ -2,16 +2,13 @@
 import React, { useEffect, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { fetchPendingTopUps } from '@/redux/thunk/adminTopUpThunks';
-import { approveTopUp, rejectTopUp } from '@/redux/thunk/adminTopUpActionsThunks';
 import { clearAdminTopUpState, clearActionMessages } from '@/redux/slice/adminTopUpsSlice';
 
 const AdminPendingTopUps: React.FC = () => {
     const dispatch = useAppDispatch();
     const { data, loading, error, actionLoading, actionError, actionSuccess } = useAppSelector((state) => state.adminTopUps);
-    const [showRejectModal, setShowRejectModal] = useState(false);
-    const [selectedTopUpId, setSelectedTopUpId] = useState<number | null>(null);
-    const [rejectReason, setRejectReason] = useState('');
-    const [rejectError, setRejectError] = useState('');
+    const [actionDropdownOpenId, setActionDropdownOpenId] = useState<number | null>(null);
+
 
     useEffect(() => {
         dispatch(fetchPendingTopUps({ page: 1 }));
@@ -43,35 +40,13 @@ const AdminPendingTopUps: React.FC = () => {
         dispatch(fetchPendingTopUps({ page: 1 }));
     };
 
-    const handleApprove = (id: number) => {
-        dispatch(approveTopUp(id));
+    
+
+    const toggleActionDropdown = (id: number) => {
+        setActionDropdownOpenId((prev) => (prev === id ? null : id));
     };
 
-    const handleRejectClick = (id: number) => {
-        setSelectedTopUpId(id);
-        setShowRejectModal(true);
-    };
-
-    const handleRejectConfirm = () => {
-        if (!rejectReason.trim()) {
-            setRejectError('Please provide a rejection reason.');
-            return;
-        }
-
-        if (selectedTopUpId) {
-            dispatch(rejectTopUp({ topUpId: selectedTopUpId, reason: rejectReason }));
-            setShowRejectModal(false);
-            setRejectReason('');
-            setRejectError('');
-            setSelectedTopUpId(null);
-        }
-    };
-
-    const handleRejectCancel = () => {
-        setShowRejectModal(false);
-        setRejectReason('');
-        setSelectedTopUpId(null);
-    };
+    
 
     if (loading) {
         return (
@@ -109,7 +84,7 @@ const AdminPendingTopUps: React.FC = () => {
     }
 
     return (
-        <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+        <div className="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-lg">
             {/* Action Messages */}
             {actionSuccess && (
                 <div className="bg-green-50 border-l-4 border-green-500 p-4 mb-4">
@@ -145,10 +120,10 @@ const AdminPendingTopUps: React.FC = () => {
                 </div>
             )}
 
-            <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
+                <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
                 <div>
-                    <h3 className="text-lg leading-6 font-medium text-gray-900">Pending Top-Up Requests</h3>
-                    <p className="mt-1 text-sm text-gray-500">Review and process pending top-up requests</p>
+                    <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white">Pending Top-Up Requests</h3>
+                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-300">Review and process pending top-up requests</p>
                 </div>
                 <button
                     onClick={handleRefresh}
@@ -163,7 +138,7 @@ const AdminPendingTopUps: React.FC = () => {
                     {/* Responsive container with horizontal scroll */}
                     <div className="overflow-x-auto">
                         <div className="min-w-full inline-block align-middle">
-                            <div className="overflow-hidden">
+                            <div className="overflow-visible">
                                 <table className="min-w-full divide-y divide-gray-200">
                                     <thead className="bg-gray-50">
                                         <tr>
@@ -208,21 +183,20 @@ const AdminPendingTopUps: React.FC = () => {
                                                 <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
                                                     {topUp.wallet_address}
                                                 </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium relative">
                                                     <button
-                                                        onClick={() => handleApprove(topUp.id)}
-                                                        disabled={actionLoading}
-                                                        className="text-green-600 hover:text-green-900 mr-3 disabled:opacity-50"
+                                                        onClick={() => toggleActionDropdown(topUp.id)}
+                                                        className="text-gray-500 hover:text-gray-700 px-2 py-1 rounded-md"
+                                                        aria-haspopup="true"
                                                     >
-                                                        Approve
+                                                        <span className="text-2xl">⋯</span>
                                                     </button>
-                                                    <button
-                                                        onClick={() => handleRejectClick(topUp.id)}
-                                                        disabled={actionLoading}
-                                                        className="text-red-600 hover:text-red-900 disabled:opacity-50"
-                                                    >
-                                                        Reject
-                                                    </button>
+
+                                                    {actionDropdownOpenId === topUp.id && (
+                                                        <div className="absolute right-0 mt-2 w-36 bg-white border rounded-md shadow-lg z-40">
+                                                            {/* Approve/Reject moved to AdminAllTopUps */}
+                                                        </div>
+                                                    )}
                                                 </td>
                                             </tr>
                                         ))}
@@ -235,7 +209,7 @@ const AdminPendingTopUps: React.FC = () => {
                     {data.pagination && (
                         <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
                             <div className="flex-1 flex justify-between sm:hidden">
-                                <button className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                <button className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">
                                     Previous
                                 </button>
                                 <button className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
@@ -290,49 +264,7 @@ const AdminPendingTopUps: React.FC = () => {
                 </div>
             )}
 
-            {/* Reject Confirmation Modal */}
-            {showRejectModal && (
-                <div className="fixed inset-0 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-50">
-                    <div className="relative bg-white rounded-lg shadow-xl w-full max-w-md">
-                        <div className="p-6">
-                            <h3 className="text-lg font-medium text-gray-900 mb-4">Reject Top-Up Request</h3>
-                            <div className="mb-4">
-                                <label htmlFor="rejectReason" className="block text-sm font-medium text-gray-700 mb-1">
-                                    Reason for rejection (optional)
-                                </label>
-                                <textarea
-                                    id="rejectReason"
-                                    rows={3}
-                                    className="shadow-sm focus:ring-blue-500 focus:border-blue-500 mt-1 block w-full sm:text-sm border border-gray-300 rounded-md p-2"
-                                    placeholder="Enter reason for rejection..."
-                                    value={rejectReason}
-                                    onChange={(e) => { setRejectReason(e.target.value); if (rejectError) setRejectError(''); }}
-                                />
-                            </div>
-                            {rejectError && (
-                                <p className="text-sm text-red-600 mb-4">{rejectError}</p>
-                            )}
-                            <div className="flex justify-end space-x-3">
-                                <button
-                                    type="button"
-                                    onClick={handleRejectCancel}
-                                    className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={handleRejectConfirm}
-                                    disabled={actionLoading || !rejectReason.trim()}
-                                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50"
-                                >
-                                    {actionLoading ? 'Rejecting...' : 'Reject'}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
+            {/* Complete/Process/Approve/Reject actions moved to AdminAllTopUps component */}
         </div>
     );
 };

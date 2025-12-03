@@ -1,6 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { fetchPendingTopUps } from '../thunk/adminTopUpThunks';
-import { approveTopUp, rejectTopUp } from '../thunk/adminTopUpActionsThunks';
+import { approveTopUp, rejectTopUp, completeTopUp, processTopUp } from '../thunk/adminTopUpActionsThunks';
 
 interface Pagination {
     total: number;
@@ -99,6 +99,25 @@ const adminTopUpSlice = createSlice({
                 state.actionLoading = false;
                 state.actionError = action.payload as string || 'Failed to approve top-up';
             })
+            // Process top-up (start processing)
+            .addCase(processTopUp.pending, (state) => {
+                state.actionLoading = true;
+                state.actionError = null;
+                state.actionSuccess = null;
+            })
+            .addCase(processTopUp.fulfilled, (state, action) => {
+                state.actionLoading = false;
+                state.actionSuccess = action.payload.message;
+                // Remove the processed top-up from the list
+                if (state.data) {
+                    state.data.data = state.data.data.filter(item => item.id !== action.payload.id);
+                    state.data.pagination.total -= 1;
+                }
+            })
+            .addCase(processTopUp.rejected, (state, action) => {
+                state.actionLoading = false;
+                state.actionError = action.payload as string || 'Failed to process top-up';
+            })
             // Reject top-up
             .addCase(rejectTopUp.pending, (state) => {
                 state.actionLoading = true;
@@ -117,6 +136,25 @@ const adminTopUpSlice = createSlice({
             .addCase(rejectTopUp.rejected, (state, action) => {
                 state.actionLoading = false;
                 state.actionError = action.payload as string || 'Failed to reject top-up';
+            })
+            // Complete top-up
+            .addCase(completeTopUp.pending, (state) => {
+                state.actionLoading = true;
+                state.actionError = null;
+                state.actionSuccess = null;
+            })
+            .addCase(completeTopUp.fulfilled, (state, action) => {
+                state.actionLoading = false;
+                state.actionSuccess = action.payload.message;
+                // Remove the completed top-up from the list
+                if (state.data) {
+                    state.data.data = state.data.data.filter(item => item.id !== action.payload.id);
+                    state.data.pagination.total -= 1;
+                }
+            })
+            .addCase(completeTopUp.rejected, (state, action) => {
+                state.actionLoading = false;
+                state.actionError = action.payload as string || 'Failed to complete top-up';
             });
     },
 });

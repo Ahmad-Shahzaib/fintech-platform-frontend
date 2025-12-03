@@ -44,11 +44,11 @@ export default function CurrencyNetworkTable() {
       </Button>
 
       <div className="p-6">
-        <h2 className="text-xl font-semibold mb-4">Currency & Network Table</h2>
+        <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Currency & Network Table</h2>
 
-        <div className="overflow-x-auto rounded-lg border border-gray-200 shadow">
-          <table className="min-w-full divide-y divide-gray-300 text-sm">
-            <thead className="bg-gray-100">
+        <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 shadow bg-white dark:bg-gray-800">
+          <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-700 text-sm">
+            <thead className="bg-gray-100 dark:bg-gray-700">
               <tr>
                 <th className="px-4 py-2 text-left font-medium">ID</th>
                 <th className="px-4 py-2 text-left font-medium">Currency</th>
@@ -62,35 +62,35 @@ export default function CurrencyNetworkTable() {
               </tr>
             </thead>
 
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-6 text-center text-sm text-gray-500">
+                  <td colSpan={9} className="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-300">
                     Loading...
                   </td>
                 </tr>
               ) : paginatedData.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-6 text-center text-sm text-gray-500">
+                  <td colSpan={9} className="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-300">
                     No Data Found
                   </td>
                 </tr>
               ) : (
                 paginatedData.map((row: any) => (
-                  <tr key={row.id} className="hover:bg-gray-50 transition">
-                    <td className="px-4 py-2">{row.id}</td>
-                    <td className="px-4 py-2 font-semibold">{row.currency?.code}</td>
-                    <td className="px-4 py-2">{row.network?.code}</td>
-                    <td className="px-4 py-2 truncate max-w-[200px]">
+                  <tr key={row.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                    <td className="px-4 py-2 text-gray-900 dark:text-gray-200">{row.id}</td>
+                    <td className="px-4 py-2 font-semibold text-gray-900 dark:text-white">{row.currency?.code}</td>
+                    <td className="px-4 py-2 text-gray-900 dark:text-gray-200">{row.network?.code}</td>
+                    <td className="px-4 py-2 truncate max-w-[200px] text-gray-900 dark:text-gray-200">
                       {row.contract_address ?? '—'}
                     </td>
-                    <td className="px-4 py-2">{row.min_transaction_amount}</td>
-                    <td className="px-4 py-2">{row.max_transaction_amount}</td>
-                    <td className="px-4 py-2">{row.network_fee_estimate_aud}</td>
+                    <td className="px-4 py-2 text-gray-900 dark:text-gray-200">{row.min_transaction_amount}</td>
+                    <td className="px-4 py-2 text-gray-900 dark:text-gray-200">{row.max_transaction_amount}</td>
+                    <td className="px-4 py-2 text-gray-900 dark:text-gray-200">{row.network_fee_estimate_aud}</td>
                     <td className="px-4 py-2">
                       <span
                         className={`px-2 py-1 text-xs rounded ${
-                          row.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                          row.is_active ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200'
                         }`}
                       >
                         {row.is_active ? 'Active' : 'Inactive'}
@@ -100,26 +100,26 @@ export default function CurrencyNetworkTable() {
                       <button
                         aria-label="actions"
                         onClick={() => setOpenRow(openRow === row.id ? null : row.id)}
-                        className="p-1 rounded hover:bg-gray-100"
+                        className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
                       >
                         ⋯
                       </button>
 
                       {openRow === row.id && (
-                        <div className="absolute right-2 mt-2 w-32 bg-white border rounded shadow z-10">
+                        <div className="absolute right-2 mt-2 w-32 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded shadow z-10">
                           <button
                             onClick={() => {
                               setDetailOpen(true);
                               dispatch(fetchCurrencyNetworkDetail(row.id));
                               setOpenRow(null);
                             }}
-                            className="w-full text-left px-3 py-2 hover:bg-gray-50"
+                            className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-300"
                           >
                             View
                           </button>
                           <button
                             onClick={() => { setUpdateId(row.id); setUpdateOpen(true); setOpenRow(null); }}
-                            className="w-full text-left px-3 py-2 hover:bg-gray-50"
+                            className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-300"
                           >
                             Update
                           </button>
@@ -169,30 +169,30 @@ export default function CurrencyNetworkTable() {
       {detailOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div
-            className="absolute inset-0"
+            className="absolute inset-0 bg-black/40 dark:bg-black/60"
             onClick={() => {
               setDetailOpen(false);
               dispatch(clearCurrencyNetworkDetail());
             }}
           />
-          <div className="relative bg-white rounded-lg shadow-2xl w-[90%] max-w-xl p-6 z-10">
+          <div className="relative bg-white dark:bg-gray-900 rounded-lg shadow-2xl w-[90%] max-w-xl p-6 z-10 text-gray-900 dark:text-gray-200">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Currency-Network Detail</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Currency-Network Detail</h3>
               <button
                 onClick={() => {
                   setDetailOpen(false);
                   dispatch(clearCurrencyNetworkDetail());
                 }}
-                className="text-sm text-gray-500"
+                className="text-sm text-gray-500 dark:text-gray-300"
               >
                 Close
               </button>
             </div>
 
             {detailLoading ? (
-              <div className="py-6 text-center">Loading...</div>
+              <div className="py-6 text-center text-gray-700 dark:text-gray-300">Loading...</div>
             ) : detail ? (
-              <div className="space-y-2 text-sm text-gray-700">
+              <div className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
                 <div><strong>ID:</strong> {detail.id}</div>
                 <div><strong>Currency ID:</strong> {detail.currency_id}</div>
                 <div><strong>Network ID:</strong> {detail.network_id}</div>
@@ -205,7 +205,7 @@ export default function CurrencyNetworkTable() {
                 <div><strong>Updated:</strong> {detail.updated_at ?? '—'}</div>
               </div>
             ) : (
-              <div className="py-6 text-center text-sm text-red-500">{detailError ?? 'No data'}</div>
+              <div className="py-6 text-center text-sm text-red-500 dark:text-red-400">{detailError ?? 'No data'}</div>
             )}
           </div>
         </div>

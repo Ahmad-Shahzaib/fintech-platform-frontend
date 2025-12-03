@@ -103,30 +103,30 @@ const ManageCurrencies = () => {
             >
                 Add New Currency
             </Button>
-            <h1 className="text-2xl font-bold text-gray-800 mb-6">Manage Currencies</h1>
+            <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">Manage Currencies</h1>
 
-            <div className="overflow-x-auto bg-white shadow-md rounded-lg">
-                <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
+            <div className="overflow-x-auto bg-white dark:bg-gray-800 shadow-md rounded-lg">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead className="bg-gray-50 dark:bg-gray-700">
                         <tr>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                 Currency
                             </th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                 Symbol
                             </th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                 Description
                             </th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                 Decimals
                             </th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                 Action
                             </th>
                         </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
+                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                         {loading ? (
                             // Loading skeletons
                             [...Array(4)].map((_, index) => (
@@ -150,7 +150,7 @@ const ManageCurrencies = () => {
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="space-y-2">
-                                            <div className="bg-gray-50 p-3 rounded-md">
+                                            <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-md">
                                                 <div className="flex justify-between mb-1">
                                                     <Skeleton className="h-4 w-20" />
                                                     <Skeleton className="h-4 w-12" />
@@ -164,41 +164,41 @@ const ManageCurrencies = () => {
                         ) : (
                             // Actual data
                             currencies.map((currency: Currency) => (
-                                <tr key={currency.id} className="hover:bg-gray-50">
+                                <tr key={currency.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="flex items-center">
                                             <div className="ml-4">
-                                                <div className="text-sm font-medium text-gray-900">{currency.name}</div>
-                                                <div className="text-sm text-gray-500">{currency.code}</div>
+                                                <div className="text-sm font-medium text-gray-900 dark:text-white">{currency.name}</div>
+                                                <div className="text-sm text-gray-500 dark:text-gray-300">{currency.code}</div>
                                             </div>
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
                                         {currency.symbol}
                                     </td>
-                                    <td className="px-6 py-4 text-sm text-gray-500 max-w-xs">
+                                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-300 max-w-xs">
                                         {currency.description}
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
                                         {currency.decimals}
                                     </td>
-                                    <td className="px-6 py-4 text-sm text-gray-500 relative">
+                                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-300 relative">
                                         <div>
                                             <button
                                                 onClick={() => setOpenMenuId(openMenuId === currency.id ? null : currency.id)}
-                                                className="p-1 rounded hover:bg-gray-100"
+                                                className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
                                                 aria-haspopup="true"
                                                 aria-expanded={openMenuId === currency.id}
                                             >
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600" viewBox="0 0 20 20" fill="currentColor">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600 dark:text-gray-300" viewBox="0 0 20 20" fill="currentColor">
                                                     <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM18 10a2 2 0 11-4 0 2 2 0 014 0z" />
                                                 </svg>
                                             </button>
 
                                             {openMenuId === currency.id && (
-                                                <div className="absolute right-0 mt-2 w-32 bg-white border rounded shadow z-10">
+                                                <div className="absolute right-0 mt-2 w-32 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded shadow z-10">
                                                     <button
-                                                        className="w-full text-left px-3 py-2 hover:bg-gray-50"
+                                                        className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-300"
                                                         onClick={() => {
                                                             // Open detail modal and let the modal fetch data
                                                             setDetailId(currency.id);
@@ -209,7 +209,7 @@ const ManageCurrencies = () => {
                                                         View
                                                     </button>
                                                     <button
-                                                        className="w-full text-left px-3 py-2 hover:bg-gray-50"
+                                                        className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-300"
                                                         onClick={() => {
                                                             setSelectedCurrency(currency);
                                                             setModalMode('edit');

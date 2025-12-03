@@ -191,14 +191,14 @@ const AddUserModalDetail = () => {
                             <tbody className="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
                                 {loading ? (
                                     <tr>
-                                        <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">Loading...</td>
+                                        <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-300">Loading...</td>
                                     </tr>
                                 ) : (
                                     users.map((user: any) => {
                                         const roleLabel = typeof user.role === 'string' ? user.role : user.role?.name || user.role?.display_name || 'user';
                                         const isActive = user.status ? user.status === 'active' : user.active === true;
                                         return (
-                                            <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-750">
+                                            <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{user.id}</td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <div className="text-sm font-medium text-gray-900 dark:text-white">{user.name}</div>

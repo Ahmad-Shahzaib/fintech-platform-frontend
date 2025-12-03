@@ -55,7 +55,7 @@ const navItems: NavItem[] = [
     name: "Manage TopUps",
     subItems: [
       { name: "All TopUps", path: "/all-topups", pro: false },
-      { name: "Pending TopUps", path: "/manage-topups", pro: false },
+      // { name: "Pending TopUps", path: "/manage-topups", pro: false },
     ],
   },
   {
