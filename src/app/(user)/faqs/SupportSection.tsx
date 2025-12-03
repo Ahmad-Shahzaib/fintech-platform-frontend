@@ -4,13 +4,22 @@ import { useState } from 'react';
 import Head from 'next/head';
 
 const SupportPage = () => {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string;
+    email: string;
+    subject: string;
+    issueType: string;
+    description: string;
+    priority: string;
+    attachment: File | null;
+  }>({
     name: '',
     email: '',
     subject: '',
     issueType: 'technical',
     description: '',
-    priority: 'medium'
+    priority: 'medium',
+    attachment: null
   });
   
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -32,8 +41,13 @@ const SupportPage = () => {
   ];
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const { name, value } = e.target as HTMLInputElement;
+    setFormData(prev => ({ ...prev, [name]: value } as any));
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files && e.target.files[0] ? e.target.files[0] : null;
+    setFormData(prev => ({ ...prev, attachment: file }));
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -46,7 +60,10 @@ const SupportPage = () => {
       await new Promise(resolve => setTimeout(resolve, 1500));
       
       // In a real app, you would send the data to your backend here
-      console.log('Support request submitted:', formData);
+      console.log('Support request submitted:', {
+        ...formData,
+        attachment: formData.attachment ? formData.attachment.name : null
+      });
       
       setSubmitSuccess(true);
       setFormData({
@@ -55,7 +72,8 @@ const SupportPage = () => {
         subject: '',
         issueType: 'technical',
         description: '',
-        priority: 'medium'
+        priority: 'medium',
+        attachment: null
       });
     } catch (error) {
       setSubmitError('Failed to submit your request. Please try again later.');
@@ -113,39 +131,7 @@ const SupportPage = () => {
           <h2 className="text-xl font-bold text-gray-800 mb-6">Submit Your Issue</h2>
           
           <form onSubmit={handleSubmit}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                  Your Name *
-                </label>
-                <input
-                  type="text"
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="John Doe"
-                />
-              </div>
-              
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                  Email Address *
-                </label>
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="john@example.com"
-                />
-              </div>
-            </div>
+          
 
             <div className="mb-6">
               <label htmlFor="subject" className="block text-sm font-medium text-gray-700 mb-1">
@@ -219,6 +205,23 @@ const SupportPage = () => {
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Please describe your issue in detail. Include any error messages, steps to reproduce, and what you've already tried."
               ></textarea>
+            </div>
+
+            <div className="mb-6">
+              <label htmlFor="attachment" className="block text-sm font-medium text-gray-700 mb-1">
+                Attachment (optional)
+              </label>
+              <input
+                id="attachment"
+                name="attachment"
+                type="file"
+                onChange={handleFileChange}
+                className="w-full text-sm text-gray-600 "
+                accept="image/*,.pdf,.doc,.docx,.txt"
+              />
+              {formData.attachment && (
+                <p className="mt-2 text-sm text-gray-700">Selected file: {formData.attachment.name}</p>
+              )}
             </div>
 
             <div className="flex justify-end">

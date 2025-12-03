@@ -65,6 +65,12 @@ const navItems: NavItem[] = [
       { name: "Kyc Requests", path: "/kyc-table", pro: false },
     ],
   },
+  {
+    name: "FAQs",
+    icon: <PageIcon />,
+    path : "/faq",
+  },
+
 ];
 
 const othersItems: NavItem[] = [];
