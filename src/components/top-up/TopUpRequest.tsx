@@ -229,8 +229,8 @@ export default function TopUpRequest() {
         {/* Form Content */}
         <div className="p-8">
           <div>
-            <h2 className="text-2xl text-center font-bold text-gray-900 dark:text-gray-100 mb-2">New Top-Up Request</h2>
-            <p className="text-sm text-center  text-gray-500 dark:text-gray-300 mb-8">Fill in the details below to request a crypto top-up to your wallet</p>
+            <h2 className="text-2xl  font-bold text-gray-900 dark:text-gray-100 mb-2">New Top-Up Request</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-300 mb-8">Fill in the details below to request a crypto top-up to your wallet</p>
 
             <form className="space-y-6" onSubmit={handleSubmit} noValidate>
               {/* Amount Input */}

@@ -75,7 +75,7 @@ export default function AddCurrencyNetworkModal({ open, onClose }: { open: boole
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0  bg-black/60 z-[100000] flex items-center justify-center">
       <div className="absolute inset-0 opacity-40" onClick={onClose} />
       <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-[95%] max-w-2xl p-6 z-10">
         <div className="flex items-center justify-between mb-4">

@@ -86,7 +86,7 @@ export default function UpdateCurrencyNetworkModal({ open, onClose, id }: { open
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 bg-black/60 z-[100000] flex items-center justify-center">
       <div className="absolute inset-0 " onClick={onClose} />
       <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-[95%] max-w-2xl p-6 z-10">
         <div className="flex items-center justify-between mb-4">
@@ -149,8 +149,8 @@ export default function UpdateCurrencyNetworkModal({ open, onClose, id }: { open
             </div>
 
             <div className="flex justify-end space-x-2">
-              <Button type="button" onClick={onClose} className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">Cancel</Button>
-              <Button type="submit" className="bg-primary-600 text-white" disabled={updateState.loading}>{updateState.loading ? 'Saving...' : 'Save'}</Button>
+              <Button type="button" onClick={onClose} className="bg-gray-100 dark:bg-gray-700  text-gray-700 dark:text-gray-300">Cancel</Button>
+              <Button type="submit" className="dark:bg-primary-600 text-white" disabled={updateState.loading}>{updateState.loading ? 'Saving...' : 'Save'}</Button>
             </div>
 
             {updateState.error && <div className="text-sm text-red-500">{updateState.error}</div>}

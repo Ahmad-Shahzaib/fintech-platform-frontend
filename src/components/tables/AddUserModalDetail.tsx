@@ -3,7 +3,8 @@ import React, { useEffect, useState, useMemo } from 'react';
 import Head from 'next/head';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { fetchUsers } from '../../redux/slice/usersSlice';
-import { fetchUserDetail } from '../../redux/thunk/userThunks';
+import { fetchUserDetail, blockUser as blockUserThunk, unblockUser as unblockUserThunk, updateUser as updateUserThunk, updateUserLimit as updateUserLimitThunk } from '../../redux/thunk/userThunks';
+import { useAlert } from '../common/GlobalAlert';
 import axios from '../../lib/axios';
 
 type FormDataType = {
@@ -55,7 +56,17 @@ const AddUserModalDetail = () => {
     // State for modal visibility
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+    const [editForm, setEditForm] = useState<{ name?: string; email?: string; phone?: string; transaction_limit?: any }>({});
     const [openDropdownId, setOpenDropdownId] = useState<number | null>(null);
+    const [showBlockModal, setShowBlockModal] = useState(false);
+    const [blockingUserId, setBlockingUserId] = useState<number | null>(null);
+    const [blockReason, setBlockReason] = useState('');
+    const [showLimitModal, setShowLimitModal] = useState(false);
+    const [limitUserId, setLimitUserId] = useState<number | null>(null);
+    const [limitValue, setLimitValue] = useState<string>('');
+
+    const { showAlert } = useAlert();
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -127,24 +138,113 @@ const AddUserModalDetail = () => {
         }
     };
 
-    const blockUser = async (id: number) => {
-        try {
-            await axios.patch(`/admin/users/${id}`, { status: 'suspended' });
-            dispatch(fetchUsers({ page }));
-            if (isDetailOpen) await dispatch(fetchUserDetail(id));
-        } catch (err) {
-            console.error('Failed to block user', err);
-            dispatch(fetchUsers({ page }));
+    // keep edit form in sync when detail opens
+    useEffect(() => {
+        if (isDetailOpen && userDetailState.data) {
+            setEditForm({
+                name: userDetailState.data?.name ?? '',
+                email: userDetailState.data?.email ?? '',
+                phone: userDetailState.data?.phone ?? '',
+                transaction_limit: userDetailState.data?.transaction_limit ?? '',
+            });
+            setIsEditing(false);
         }
+    }, [isDetailOpen, userDetailState.data]);
+
+    const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+        const { name, value } = e.target as HTMLInputElement;
+        setEditForm((prev) => ({ ...prev, [name]: value }));
+    };
+
+    const startEditing = () => setIsEditing(true);
+    const cancelEditing = () => {
+        setIsEditing(false);
+        // reset to current detail
+        setEditForm({
+            name: userDetailState.data?.name ?? '',
+            email: userDetailState.data?.email ?? '',
+            phone: userDetailState.data?.phone ?? '',
+            transaction_limit: userDetailState.data?.transaction_limit ?? '',
+        });
+    };
+
+    const saveEdits = async () => {
+        try {
+            const id = userDetailState.data?.id;
+            if (!id) return;
+            await dispatch(updateUserThunk({ userId: id, data: editForm }));
+            setIsEditing(false);
+            dispatch(fetchUsers({ page }));
+            await dispatch(fetchUserDetail(id));
+        } catch (err) {
+            console.error('Failed to update user', err);
+        }
+    };
+
+    const blockUser = async (id: number) => {
+        // open modal to collect reason
+        setBlockingUserId(id);
+        setBlockReason('');
+        setShowBlockModal(true);
     };
 
     const unblockUser = async (id: number) => {
         try {
-            await axios.patch(`/admin/users/${id}`, { status: 'active' });
+            const res = await dispatch(unblockUserThunk(id)).unwrap();
+            const message = res?.message ?? 'User unblocked successfully';
+            showAlert(message, 'success');
             dispatch(fetchUsers({ page }));
             if (isDetailOpen) await dispatch(fetchUserDetail(id));
         } catch (err) {
             console.error('Failed to unblock user', err);
+            const msg = (err as any)?.message || 'Failed to unblock user';
+            showAlert(msg, 'error');
+            dispatch(fetchUsers({ page }));
+        }
+    };
+
+    const confirmBlockUser = async () => {
+        try {
+            if (!blockingUserId) return;
+            const res = await dispatch(blockUserThunk({ userId: blockingUserId, reason: blockReason })).unwrap();
+            const message = res?.message ?? 'User blocked successfully';
+            showAlert(message, 'success');
+            setShowBlockModal(false);
+            setBlockingUserId(null);
+            setBlockReason('');
+            dispatch(fetchUsers({ page }));
+            if (isDetailOpen) await dispatch(fetchUserDetail(blockingUserId));
+        } catch (err) {
+            console.error('Failed to block user', err);
+            const msg = (err as any)?.message || 'Failed to block user';
+            showAlert(msg, 'error');
+            dispatch(fetchUsers({ page }));
+        }
+    };
+
+    const openLimitModal = (user: any) => {
+        setLimitUserId(user?.id ?? null);
+        setLimitValue(user?.transaction_limit != null ? String(user.transaction_limit) : '');
+        setShowLimitModal(true);
+        setOpenDropdownId(null);
+    };
+
+    const confirmUpdateLimit = async () => {
+        try {
+            if (!limitUserId) return;
+            const value = parseFloat(limitValue as string) || 0;
+            const res = await dispatch(updateUserLimitThunk({ userId: limitUserId, transaction_limit: value })).unwrap();
+            const message = (res && (res.message || res?.msg)) || 'Transaction limit updated';
+            showAlert(message, 'success');
+            setShowLimitModal(false);
+            setLimitUserId(null);
+            setLimitValue('');
+            dispatch(fetchUsers({ page }));
+            if (isDetailOpen) await dispatch(fetchUserDetail(limitUserId));
+        } catch (err) {
+            console.error('Failed to update transaction limit', err);
+            const msg = (err as any)?.message || 'Failed to update transaction limit';
+            showAlert(msg, 'error');
             dispatch(fetchUsers({ page }));
         }
     };
@@ -248,34 +348,43 @@ const AddUserModalDetail = () => {
                                                                     </svg>
                                                                     View Details
                                                                 </button>
-                                                                {isActive ? (
-                                                                    <button
-                                                                        onClick={() => {
-                                                                            blockUser(user.id);
-                                                                            setOpenDropdownId(null);
-                                                                        }}
-                                                                        className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-red-600 dark:text-red-400 transition-colors flex items-center"
-                                                                    >
-                                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                                            <circle cx="12" cy="12" r="10" />
-                                                                            <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
-                                                                        </svg>
-                                                                        Block
-                                                                    </button>
-                                                                ) : (
-                                                                    <button
-                                                                        onClick={() => {
-                                                                            unblockUser(user.id);
-                                                                            setOpenDropdownId(null);
-                                                                        }}
-                                                                        className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-green-600 dark:text-green-400 transition-colors flex items-center"
-                                                                    >
-                                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                                            <path d="M5 13l4 4L19 7" />
-                                                                        </svg>
-                                                                        Unblock
-                                                                    </button>
-                                                                )}
+                                                                <button
+                                                                    onClick={() => {
+                                                                        blockUser(user.id);
+                                                                        setOpenDropdownId(null);
+                                                                    }}
+                                                                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-red-600 dark:text-red-400 transition-colors flex items-center"
+                                                                >
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                                        <circle cx="12" cy="12" r="10" />
+                                                                        <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+                                                                    </svg>
+                                                                    Block
+                                                                </button>
+
+                                                                <button
+                                                                    onClick={() => {
+                                                                        unblockUser(user.id);
+                                                                        setOpenDropdownId(null);
+                                                                    }}
+                                                                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-green-600 dark:text-green-400 transition-colors flex items-center"
+                                                                >
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                                        <path d="M5 13l4 4L19 7" />
+                                                                    </svg>
+                                                                    Unblock
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        openLimitModal(user);
+                                                                    }}
+                                                                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-blue-600 dark:text-blue-400 transition-colors flex items-center"
+                                                                >
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                                        <path d="M12 1v22M5 6h14M5 18h14" />
+                                                                    </svg>
+                                                                    Update transaction limit
+                                                                </button>
                                                             </div>
                                                         )}
                                                     </div>
@@ -337,13 +446,21 @@ const AddUserModalDetail = () => {
 
             {/* User Detail Modal */}
             {isDetailOpen && (
-                <div className="fixed inset-0 flex items-center justify-center z-50 ">
+                <div className="fixed inset-0 flex items-center justify-center  bg-black/60 z-[100000] ">
                     <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl p-6 dark:bg-gray-800">
                         <div className="flex justify-between items-center mb-4">
                             <h3 className="text-lg font-medium text-gray-900 dark:text-white">User Detail</h3>
-                            <button onClick={() => setIsDetailOpen(false)} className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100">
-                                Close
-                            </button>
+                            <div className="flex items-center gap-2">
+                                {isEditing ? (
+                                    <>
+                                        <button onClick={saveEdits} className="px-3 py-1 bg-blue-600 text-white rounded text-sm">Save</button>
+                                        <button onClick={cancelEditing} className="px-3 py-1 bg-gray-200 text-gray-800 rounded text-sm">Cancel</button>
+                                    </>
+                                ) : (
+                                    <button onClick={startEditing} className="px-3 py-1 bg-yellow-400 text-black rounded text-sm">Edit</button>
+                                )}
+                                <button onClick={() => setIsDetailOpen(false)} className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100">Close</button>
+                            </div>
                         </div>
 
                         {userDetailState.loading ? (
@@ -354,15 +471,27 @@ const AddUserModalDetail = () => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <div className="text-sm text-gray-500 dark:text-gray-400">Name</div>
-                                    <div className="font-medium text-gray-900 dark:text-white">{userDetailState.data?.name ?? '-'}</div>
+                                    {isEditing ? (
+                                        <input name="name" value={editForm.name ?? ''} onChange={handleEditChange} className="mt-1 block w-full border rounded px-2 py-1" />
+                                    ) : (
+                                        <div className="font-medium text-gray-900 dark:text-white">{userDetailState.data?.name ?? '-'}</div>
+                                    )}
                                 </div>
                                 <div>
                                     <div className="text-sm text-gray-500 dark:text-gray-400">Email</div>
-                                    <div className="font-medium text-gray-900 dark:text-white">{userDetailState.data?.email ?? '-'}</div>
+                                    {isEditing ? (
+                                        <input name="email" value={editForm.email ?? ''} onChange={handleEditChange} className="mt-1 block w-full border rounded px-2 py-1" />
+                                    ) : (
+                                        <div className="font-medium text-gray-900 dark:text-white">{userDetailState.data?.email ?? '-'}</div>
+                                    )}
                                 </div>
                                 <div>
                                     <div className="text-sm text-gray-500 dark:text-gray-400">Phone</div>
-                                    <div className="font-medium text-gray-900 dark:text-white">{userDetailState.data?.phone ?? '-'}</div>
+                                    {isEditing ? (
+                                        <input name="phone" value={editForm.phone ?? ''} onChange={handleEditChange} className="mt-1 block w-full border rounded px-2 py-1" />
+                                    ) : (
+                                        <div className="font-medium text-gray-900 dark:text-white">{userDetailState.data?.phone ?? '-'}</div>
+                                    )}
                                 </div>
                                 <div>
                                     <div className="text-sm text-gray-500 dark:text-gray-400">Status</div>
@@ -370,16 +499,72 @@ const AddUserModalDetail = () => {
                                 </div>
                                 <div>
                                     <div className="text-sm text-gray-500 dark:text-gray-400">Transaction limit</div>
-                                    <div className="font-medium text-gray-900 dark:text-white">{userDetailState.data?.transaction_limit ?? '-'}</div>
+                                    {isEditing ? (
+                                        <input name="transaction_limit" value={editForm.transaction_limit ?? ''} onChange={handleEditChange} className="mt-1 block w-full border rounded px-2 py-1" />
+                                    ) : (
+                                        <div className="font-medium text-gray-900 dark:text-white">{userDetailState.data?.transaction_limit ?? '-'}</div>
+                                    )}
                                 </div>
                                 <div>
                                     <div className="text-sm text-gray-500 dark:text-gray-400">Last login</div>
                                     <div className="font-medium text-gray-900 dark:text-white">{userDetailState.data?.last_login_at ?? '-'}</div>
                                 </div>
 
-
                             </div>
                         )}
+                    </div>
+                </div>
+            )}
+
+            {/* Block Reason Modal */}
+            {showBlockModal && (
+                <div className="fixed inset-0 flex items-center justify-center z-[100000] dark:bg-black/60">
+                    <div className="absolute inset-0 bg-black opacity-40" onClick={() => setShowBlockModal(false)} />
+                    <div className="bg-white rounded-lg shadow-2xl w-full max-w-lg p-6 z-50 dark:bg-gray-800">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-lg font-medium text-gray-900 dark:text-white">Block User</h3>
+                            <button onClick={() => setShowBlockModal(false)} className="text-gray-500 hover:text-gray-700 dark:text-gray-300">Close</button>
+                        </div>
+                        <div>
+                            <div className="text-sm text-gray-500 dark:text-gray-400 mb-2">Reason for blocking</div>
+                            <textarea
+                                value={blockReason}
+                                onChange={(e) => setBlockReason(e.target.value)}
+                                rows={4}
+                                className="w-full border rounded px-2 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                            />
+                        </div>
+                        <div className="mt-4 flex justify-end gap-2">
+                            <button onClick={() => setShowBlockModal(false)} className="px-3 py-1 bg-gray-200 text-gray-800 rounded text-sm">Cancel</button>
+                            <button onClick={confirmBlockUser} className="px-3 py-1 bg-red-600 text-white rounded text-sm">Block</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Update Transaction Limit Modal */}
+            {showLimitModal && (
+                <div className="fixed inset-0 flex items-center justify-center z-[100000] dark:bg-black/60">
+                    <div className="absolute inset-0 bg-black opacity-40" onClick={() => setShowLimitModal(false)} />
+                    <div className="bg-white rounded-lg shadow-2xl w-full max-w-lg p-6 z-50 dark:bg-gray-800">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-lg font-medium text-gray-900 dark:text-white">Update Transaction Limit</h3>
+                            <button onClick={() => setShowLimitModal(false)} className="text-gray-500 hover:text-gray-700 dark:text-gray-300">Close</button>
+                        </div>
+                        <div>
+                            <div className="text-sm text-gray-500 dark:text-gray-400 mb-2">New transaction limit</div>
+                            <input
+                                value={limitValue}
+                                onChange={(e) => setLimitValue(e.target.value)}
+                                type="number"
+                                step="0.01"
+                                className="w-full border rounded px-2 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                            />
+                        </div>
+                        <div className="mt-4 flex justify-end gap-2">
+                            <button onClick={() => setShowLimitModal(false)} className="px-3 py-1 bg-gray-200 text-gray-800 rounded text-sm">Cancel</button>
+                            <button onClick={confirmUpdateLimit} className="px-3 py-1 bg-blue-600 text-white rounded text-sm">Update</button>
+                        </div>
                     </div>
                 </div>
             )}
