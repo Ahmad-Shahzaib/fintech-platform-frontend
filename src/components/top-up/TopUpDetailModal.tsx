@@ -20,7 +20,7 @@ const TopUpDetailModal: React.FC<TopUpDetailModalProps> = ({ isOpen, onClose, to
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0  dark:bg-black/60 overflow-y-auto h-full w-full flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/60  dark:bg-black/60 overflow-y-auto h-full w-full flex items-center justify-center z-[100000]">
             <div className="relative bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-4xl max-h-[85vh] top-5 overflow-y-auto text-gray-900 dark:text-gray-200">
                 <div className="p-6">
                     <div className="flex justify-between items-center pb-3">

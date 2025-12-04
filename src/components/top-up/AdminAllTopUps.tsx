@@ -1,12 +1,13 @@
 // components/AdminAllTopUps.tsx
 "use client";
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { fetchAllTopUps, AdminAllTopUpsQuery } from '@/redux/thunk/adminAllTopUpsThunks';
 import { fetchTopUpDetail } from '@/redux/thunk/adminTopUpDetailThunks';
 import { completeTopUp, processTopUp, approveTopUp, rejectTopUp } from '@/redux/thunk/adminTopUpActionsThunks';
 import { clearAdminAllTopUpsState } from '@/redux/slice/adminAllTopUpsSlice';
 import TopUpDetailModal from './TopUpDetailModal';
+import { useAlert } from '@/components/common/GlobalAlert';
 
 const AdminAllTopUps: React.FC = () => {
     const dispatch = useAppDispatch();
@@ -27,12 +28,33 @@ const AdminAllTopUps: React.FC = () => {
     const [processError, setProcessError] = useState('');
     const [actionDropdownOpenId, setActionDropdownOpenId] = useState<number | null>(null);
 
+    const { showAlert } = useAlert();
+
     const toggleActionDropdown = (id: number) => {
         setActionDropdownOpenId((prev) => (prev === id ? null : id));
     };
 
-    const handleApprove = (id: number) => {
-        dispatch(approveTopUp(id));
+    const handleApprove = async (id: number) => {
+        // debug
+        // eslint-disable-next-line no-console
+        console.debug('handleApprove called for id', id);
+            try {
+                const res = await dispatch(approveTopUp(id)).unwrap();
+                // eslint-disable-next-line no-console
+                console.debug('approveTopUp resolved', res);
+                const msg = res?.message || 'Approved successfully';
+                try { sessionStorage.setItem('globalAlert', JSON.stringify({ message: msg, type: 'success' })); } catch (e) {}
+                showAlert(msg, 'success');
+                // show message then refresh page so user sees it
+                setTimeout(() => {
+                    try { window.location.reload(); } catch (e) { dispatch(fetchAllTopUps(filters)); }
+                }, 1200);
+            } catch (err: any) {
+                // eslint-disable-next-line no-console
+                console.debug('approveTopUp failed', err);
+                const message = typeof err === 'string' ? err : err?.message || 'Failed to approve';
+                showAlert(message, 'error');
+            }
     };
 
     const [showRejectModal, setShowRejectModal] = useState(false);
@@ -52,7 +74,27 @@ const AdminAllTopUps: React.FC = () => {
         }
 
         if (selectedTopUpId) {
-            dispatch(rejectTopUp({ topUpId: selectedTopUpId, reason: rejectReason }));
+            (async () => {
+                // eslint-disable-next-line no-console
+                console.debug('handleRejectConfirm called for id', selectedTopUpId, 'reason', rejectReason);
+                try {
+                    const res = await dispatch(rejectTopUp({ topUpId: selectedTopUpId, reason: rejectReason })).unwrap();
+                    // eslint-disable-next-line no-console
+                    console.debug('rejectTopUp resolved', res);
+                    const msg = res?.message || 'Rejected successfully';
+                    try { sessionStorage.setItem('globalAlert', JSON.stringify({ message: msg, type: 'success' })); } catch (e) {}
+                    showAlert(msg, 'success');
+                    setTimeout(() => {
+                        try { window.location.reload(); } catch (e) { dispatch(fetchAllTopUps(filters)); }
+                    }, 1200);
+                } catch (err: any) {
+                    // eslint-disable-next-line no-console
+                    console.debug('rejectTopUp failed', err);
+                    const message = typeof err === 'string' ? err : err?.message || 'Failed to reject';
+                    showAlert(message, 'error');
+                }
+            })();
+
             setShowRejectModal(false);
             setRejectReason('');
             setRejectError('');
@@ -114,14 +156,33 @@ const AdminAllTopUps: React.FC = () => {
         }
 
         if (selectedTopUpId) {
-            dispatch(
-                completeTopUp({
-                    topUpId: selectedTopUpId,
-                    transaction_hash: transactionHash.trim(),
-                    actual_crypto_sent: amount,
-                    admin_notes: adminNotes.trim() || undefined,
-                })
-            );
+            (async () => {
+                // eslint-disable-next-line no-console
+                console.debug('handleCompleteConfirm called for id', selectedTopUpId, 'payload', { transaction_hash: transactionHash.trim(), actual_crypto_sent: amount });
+                try {
+                    const res = await dispatch(
+                        completeTopUp({
+                            topUpId: selectedTopUpId,
+                            transaction_hash: transactionHash.trim(),
+                            actual_crypto_sent: amount,
+                            admin_notes: adminNotes.trim() || undefined,
+                        })
+                    ).unwrap();
+                    // eslint-disable-next-line no-console
+                    console.debug('completeTopUp resolved', res);
+                    const msg = res?.message || 'Completed successfully';
+                    try { sessionStorage.setItem('globalAlert', JSON.stringify({ message: msg, type: 'success' })); } catch (e) {}
+                    showAlert(msg, 'success');
+                    setTimeout(() => {
+                        try { window.location.reload(); } catch (e) { dispatch(fetchAllTopUps(filters)); }
+                    }, 1200);
+                } catch (err: any) {
+                    // eslint-disable-next-line no-console
+                    console.debug('completeTopUp failed', err);
+                    const message = typeof err === 'string' ? err : err?.message || 'Failed to complete';
+                    showAlert(message, 'error');
+                }
+            })();
 
             setShowCompleteModal(false);
             setTransactionHash('');
@@ -143,12 +204,31 @@ const AdminAllTopUps: React.FC = () => {
 
     const handleProcessConfirm = () => {
         if (selectedTopUpId) {
-            dispatch(
-                processTopUp({
-                    topUpId: selectedTopUpId,
-                    admin_notes: processAdminNotes.trim() || undefined,
-                })
-            );
+            (async () => {
+                // eslint-disable-next-line no-console
+                console.debug('handleProcessConfirm called for id', selectedTopUpId, 'notes', processAdminNotes);
+                try {
+                    const res = await dispatch(
+                        processTopUp({
+                            topUpId: selectedTopUpId,
+                            admin_notes: processAdminNotes.trim() || undefined,
+                        })
+                    ).unwrap();
+                    // eslint-disable-next-line no-console
+                    console.debug('processTopUp resolved', res);
+                    const msg = res?.message || 'Processing started';
+                    try { sessionStorage.setItem('globalAlert', JSON.stringify({ message: msg, type: 'success' })); } catch (e) {}
+                    showAlert(msg, 'success');
+                    setTimeout(() => {
+                        try { window.location.reload(); } catch (e) { dispatch(fetchAllTopUps(filters)); }
+                    }, 1200);
+                } catch (err: any) {
+                    // eslint-disable-next-line no-console
+                    console.debug('processTopUp failed', err);
+                    const message = typeof err === 'string' ? err : err?.message || 'Failed to start processing';
+                    showAlert(message, 'error');
+                }
+            })();
 
             setShowProcessModal(false);
             setProcessAdminNotes('');
@@ -220,7 +300,7 @@ const AdminAllTopUps: React.FC = () => {
 
     return (
         <>
-            <div className="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-lg">
+            <div className="bg-white dark:bg-gray-800 shadow overflow-visible sm:rounded-lg">
                 <div className="px-4 py-5 sm:px-6 flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
                     <div>
                         <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white">All Top-Up Requests</h3>
@@ -258,7 +338,7 @@ const AdminAllTopUps: React.FC = () => {
                     <>
                         <div className="overflow-x-auto">
                             <div className="min-w-full inline-block align-middle">
-                                <div className="overflow-hidden">
+                                <div className="overflow-visible">
                                     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                                         <thead className="bg-gray-50 dark:bg-gray-700">
                                             <tr>
@@ -289,8 +369,20 @@ const AdminAllTopUps: React.FC = () => {
                                             </tr>
                                         </thead>
                                             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                            {data.data.data.map((topUp) => (
-                                                <tr key={topUp.id}>
+                                            {data.data.data.map((topUp) => {
+                                                const status = topUp.status;
+                                                const isPending = status === 'pending';
+                                                const isApproved = status === 'approved';
+                                                const isProcessing = status === 'processing';
+                                                const isCompleted = status === 'completed';
+
+                                                const canApprove = isPending;
+                                                const canProcess = isApproved;
+                                                const canComplete = isProcessing;
+                                                const canReject = true; // View & Reject always enabled
+
+                                                return (
+                                                    <tr key={topUp.id}>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-200">
                                                         {topUp.transaction_id}
                                                     </td>
@@ -327,7 +419,7 @@ const AdminAllTopUps: React.FC = () => {
                                                             </button>
 
                                                             {actionDropdownOpenId === topUp.id && (
-                                                                <div className="absolute right-0 mt-2 w-36 bg-white border rounded-md shadow-lg z-40">
+                                                                <div className="absolute right-0 mt-2 w-44 bg-white border rounded-md shadow-lg z-50">
                                                                     <button
                                                                         onClick={() => { handleViewDetails(topUp.id); setActionDropdownOpenId(null); }}
                                                                         className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
@@ -336,37 +428,38 @@ const AdminAllTopUps: React.FC = () => {
                                                                     </button>
                                                                     <button
                                                                         onClick={() => { handleApprove(topUp.id); setActionDropdownOpenId(null); }}
-                                                                        disabled={actionLoading}
-                                                                        className="block w-full text-left px-4 py-2 text-sm text-green-600 hover:bg-gray-50 disabled:opacity-50"
+                                                                        disabled={!canApprove || actionLoading}
+                                                                        className={`block w-full text-left px-4 py-2 text-sm ${canApprove ? 'text-green-600 hover:bg-gray-50' : 'text-gray-400 cursor-not-allowed'} disabled:opacity-50`}
                                                                     >
                                                                         Approve
                                                                     </button>
                                                                     <button
-                                                                        onClick={() => { handleRejectClick(topUp.id); }}
-                                                                        disabled={actionLoading}
+                                                                        onClick={() => { handleRejectClick(topUp.id); setActionDropdownOpenId(null); }}
+                                                                        disabled={!canReject || actionLoading}
                                                                         className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-50 disabled:opacity-50"
                                                                     >
                                                                         Reject
                                                                     </button>
-                                                                     <button
+                                                                    <button
                                                                         onClick={() => { handleProcessClick(topUp.id); setActionDropdownOpenId(null); }}
-                                                                        className="block w-full text-left px-4 py-2 text-sm text-indigo-600 hover:bg-gray-50"
+                                                                        disabled={!canProcess}
+                                                                        className={`block w-full text-left px-4 py-2 text-sm ${canProcess ? 'text-indigo-600 hover:bg-gray-50' : 'text-gray-400 cursor-not-allowed'} disabled:opacity-50`}
                                                                     >
                                                                         Process
                                                                     </button>
                                                                     <button
                                                                         onClick={() => { handleCompleteClick(topUp.id); setActionDropdownOpenId(null); }}
-                                                                        className="block w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-gray-50"
+                                                                        disabled={!canComplete}
+                                                                        className={`block w-full text-left px-4 py-2 text-sm ${canComplete ? 'text-blue-600 hover:bg-gray-50' : 'text-gray-400 cursor-not-allowed'} disabled:opacity-50`}
                                                                     >
                                                                         Complete
                                                                     </button>
-                                                                   
-                                                                    
                                                                 </div>
                                                             )}
                                                         </td>
                                                 </tr>
-                                            ))}
+                                                );
+                                            })}
                                         </tbody>
                                     </table>
                                 </div>
@@ -464,6 +557,8 @@ const AdminAllTopUps: React.FC = () => {
                 onClose={() => setIsModalOpen(false)}
                 topUpId={selectedTopUpId}
             />
+
+            {/* Alerts are handled globally via MUI AlertProvider */}
 
             {/* Complete Confirmation Modal */}
             {showCompleteModal && (
@@ -571,7 +666,7 @@ const AdminAllTopUps: React.FC = () => {
             )}
             {/* Reject Confirmation Modal */}
             {showRejectModal && (
-                <div className="fixed inset-0 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-50">
+                <div className="fixed inset-0 bg-opacity-50 bg-black/60 z-[100000] overflow-y-auto h-full w-full flex items-center justify-center z-50">
                     <div className="relative bg-white rounded-lg shadow-xl w-full max-w-md">
                         <div className="p-6">
                             <h3 className="text-lg font-medium text-gray-900 mb-4">Reject Top-Up Request</h3>
