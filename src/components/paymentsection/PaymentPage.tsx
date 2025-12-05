@@ -132,7 +132,7 @@ export default function PaymentConfirmationPage() {
                     className="w-full px-4 py-3.5 bg-gray-50 dark:bg-gray-700 border-0 rounded-xl text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 transition-all appearance-none cursor-pointer"
                   >
                     <option value="bank_transfer">Bank Transfer</option>
-                    <option value="card">Card</option>
+                    {/* <option value="card">Card</option> */}
                     <option value="paypal">PayPal</option>
                   </select>
                 </div>

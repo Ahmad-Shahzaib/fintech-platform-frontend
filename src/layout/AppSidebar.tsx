@@ -18,7 +18,7 @@ import {
   UserCircleIcon,
 } from "../icons/index";
 import SidebarWidget from "./SidebarWidget";
-import { MagnetIcon } from "lucide-react";
+import { MagnetIcon, SettingsIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 type NavItem = {
@@ -72,6 +72,15 @@ const navItems: NavItem[] = [
     icon: <PageIcon />,
     path : "/faq",
   },
+  {
+    name: "Settings",
+    icon: <SettingsIcon />,
+    subItems:
+    [
+      { name: "Payment Method ", path: "/payment-method", pro: false },
+      { name: "Bank Details ", path: "/bank-details", pro: false },
+    ]
+  }
 
 ];
 
