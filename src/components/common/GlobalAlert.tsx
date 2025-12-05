@@ -56,9 +56,9 @@ export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         autoHideDuration={3000}
         onClose={handleClose}
           anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-          sx={{ zIndex: 14000, top: '7rem !important', right: '10rem !important' }}
+          sx={{ zIndex: 14000, top: '5rem !important', right: '0rem !important' }}
       >
-          <Alert onClose={handleClose} severity={severity} sx={{ width: 'auto', minWidth: 300, maxWidth: 420, textAlign: 'left' }}>
+          <Alert onClose={handleClose} severity={severity} sx={{ width: 'auto', minWidth: 300, maxWidth: 420, textAlign: 'left', backgroundColor: '#54ab64ff', color: 'white' }}>
           {message}
         </Alert>
       </Snackbar>

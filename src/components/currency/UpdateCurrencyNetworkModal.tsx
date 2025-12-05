@@ -5,6 +5,8 @@ import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import { fetchCurrencies } from '../../redux/thunk/currencyThunks';
 import { fetchNetworks } from '../../redux/thunk/networkThunks';
 import { fetchCurrencyNetworkDetail, updateCurrencyNetwork } from '../../redux/thunk/currencyNetworkThunks';
+import { unwrapResult } from '@reduxjs/toolkit';
+import { useAlert } from '../common/GlobalAlert';
 import { clear as clearCurrencyNetworkDetail } from '../../redux/slice/currencyNetworkSlice';
 import { clearUpdate } from '../../redux/slice/currencyNetworkUpdateSlice';
 import { fetchCurrencyNetworks } from '../../redux/slice/currencyNetworksSlice';
@@ -16,6 +18,7 @@ export default function UpdateCurrencyNetworkModal({ open, onClose, id }: { open
   const networks = useAppSelector((s) => (s as any).networks?.items ?? []);
   const detailState = useAppSelector((s) => (s as any).currencyNetworkDetail ?? { data: null, loading: false, error: null });
   const updateState = useAppSelector((s) => (s as any).currencyNetworkUpdate ?? { data: null, loading: false, error: null });
+  const { showAlert } = useAlert();
 
   const [form, setForm] = useState({
     currency_id: '',
@@ -67,7 +70,7 @@ export default function UpdateCurrencyNetworkModal({ open, onClose, id }: { open
     setForm((s) => ({ ...s, [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!id) return;
     const payload = {
@@ -80,7 +83,19 @@ export default function UpdateCurrencyNetworkModal({ open, onClose, id }: { open
       is_active: form.is_active ? 1 : 0,
     };
 
-    dispatch(updateCurrencyNetwork({ id, payload }));
+    try {
+      const resultAction = await dispatch(updateCurrencyNetwork({ id, payload } as any));
+      unwrapResult(resultAction);
+      dispatch(fetchCurrencyNetworks());
+      dispatch(clearUpdate());
+      dispatch(clearCurrencyNetworkDetail());
+      onClose();
+      showAlert('Currency & Network updated successfully', 'success');
+    } catch (err: any) {
+      const msg = err?.payload || err?.message || 'Failed to update currency network';
+      showAlert(typeof msg === 'string' ? msg : 'Failed to update currency network', 'error');
+      console.error('Failed to update currency network', err);
+    }
   };
 
   if (!open) return null;

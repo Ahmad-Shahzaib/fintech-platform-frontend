@@ -2,8 +2,11 @@
 
 import React, { useEffect } from 'react';
 import { fetchAdminAllKyc } from '../../redux/thunk/adminAllKycThunks';
-import { fetchAdminKycDetail } from '../../redux/thunk/adminKycThunks';
+import { fetchAdminKycDetail, approveAdminKyc, rejectAdminKyc } from '../../redux/thunk/adminKycThunks';
+import Image from 'next/image';
+import { ExternalLink, X, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
+import { useAlert } from '../common/GlobalAlert';
 import { useState, useMemo } from 'react';
 
 const AllKycGet: React.FC = () => {
@@ -16,6 +19,10 @@ const AllKycGet: React.FC = () => {
   const [page, setPage] = useState<number>(pagination?.current_page ?? 1);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [openDropdownId, setOpenDropdownId] = useState<number | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [showRejectInput, setShowRejectInput] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const { showAlert } = useAlert();
 
   useEffect(() => {
     dispatch(fetchAdminAllKyc({ page }));
@@ -45,6 +52,87 @@ const AllKycGet: React.FC = () => {
       setIsDetailOpen(true);
     } catch (err) {
       console.error('Failed to fetch kyc detail', err);
+    }
+  };
+
+  const formatDate = (d?: string) => {
+    if (!d) return '-';
+    try {
+      return new Date(d).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+    } catch {
+      return d;
+    }
+  };
+
+  const getStatus = (s: string) => {
+    const map: any = {
+      approved: { color: 'bg-green-100 text-green-800', icon: CheckCircle },
+      rejected: { color: 'bg-red-100 text-red-800', icon: XCircle },
+      pending: { color: 'bg-yellow-100 text-yellow-800', icon: Clock },
+    };
+    const item = map[s] || map.pending;
+    const Icon = item.icon;
+    return (
+      <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${item.color}`}>
+        {Icon && <Icon size={14} />}
+        {s?.charAt(0).toUpperCase() + s?.slice(1)}
+      </span>
+    );
+  };
+
+  const confirmApprove = async () => {
+    const id = detail?.id;
+    if (!id) return;
+    setActionLoading(true);
+    try {
+      const action: any = await dispatch(approveAdminKyc(id));
+      if (action.type && action.type.endsWith('/fulfilled')) {
+        setIsDetailOpen(false);
+        // refresh list
+        dispatch(fetchAdminAllKyc({ page }));
+        try { sessionStorage.setItem('globalAlert', JSON.stringify({ message: 'KYC approved', type: 'success' })); } catch (e) {}
+        showAlert('KYC approved', 'success');
+      } else {
+        console.error('Approve failed', action.payload || action.error);
+        const msg = (action.payload as any) || (action.error && action.error.message) || 'Failed to approve KYC';
+        showAlert(msg, 'error');
+      }
+    } catch (err) {
+      console.error('Approve error', err);
+      showAlert('Failed to approve KYC. See console for details.', 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const confirmReject = async () => {
+    const id = detail?.id;
+    if (!id) return;
+    if (!rejectionReason.trim()) {
+      showAlert('Please provide a rejection reason', 'warning');
+      return;
+    }
+    setActionLoading(true);
+    try {
+      const action: any = await dispatch(rejectAdminKyc({ id, rejection_reason: rejectionReason.trim() }));
+      if (action.type && action.type.endsWith('/fulfilled')) {
+        setIsDetailOpen(false);
+        setShowRejectInput(false);
+        setRejectionReason('');
+        // refresh list
+        dispatch(fetchAdminAllKyc({ page }));
+        try { sessionStorage.setItem('globalAlert', JSON.stringify({ message: 'KYC rejected', type: 'success' })); } catch (e) {}
+        showAlert('KYC rejected', 'success');
+      } else {
+        console.error('Reject failed', action.payload || action.error);
+        const msg = (action.payload as any) || (action.error && action.error.message) || 'Failed to reject KYC';
+        showAlert(msg, 'error');
+      }
+    } catch (err) {
+      console.error('Reject error', err);
+      showAlert('Failed to reject KYC. See console for details.', 'error');
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -179,9 +267,9 @@ const AllKycGet: React.FC = () => {
       </div>
 
       {/* KYC Detail Modal */}
-      {isDetailOpen && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[100000]">
-          <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl p-6 dark:bg-gray-800">
+      {isDetailOpen && ( 
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[100000] ">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[80vh] overflow-y-auto p-4">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">KYC Detail</h3>
               <button onClick={() => setIsDetailOpen(false)} className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100">Close</button>
@@ -192,32 +280,172 @@ const AllKycGet: React.FC = () => {
             ) : adminKycState.detailError ? (
               <div className="text-red-500">{adminKycState.detailError}</div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">Full name</div>
-                  <div className="font-medium text-gray-900 dark:text-white">{adminKycState.detail?.data?.full_name ?? '-'}</div>
-                </div>
-                <div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">Email</div>
-                  <div className="font-medium text-gray-900 dark:text-white">{adminKycState.detail?.data?.user?.email ?? '-'}</div>
-                </div>
-                <div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">Document Type</div>
-                  <div className="font-medium text-gray-900 dark:text-white">{adminKycState.detail?.data?.document_type ?? '-'}</div>
-                </div>
-                <div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">Status</div>
-                  <div className="font-medium text-gray-900 dark:text-white">{adminKycState.detail?.data?.status ?? '-'}</div>
-                </div>
-                <div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">Submitted At</div>
-                  <div className="font-medium text-gray-900 dark:text-white">{adminKycState.detail?.data?.submitted_at ?? '-'}</div>
-                </div>
-                {detail?.status !== 'approved' && (
+              <div className="p-6 space-y-6 text-gray-900 dark:text-gray-100">
+                {/* Header info */}
+                <div className="flex items-start justify-between">
                   <div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">Rejection Reason</div>
-                    <div className="font-medium text-gray-900 dark:text-white">{detail?.rejection_reason ?? '-'}</div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">KYC Details</h3>
+                    <div className="text-sm text-gray-500 dark:text-gray-300 mt-1">ID: {detail?.id} • {getStatus(detail?.status ?? 'pending')}</div>
                   </div>
+                </div>
+
+                {/* Personal Info */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">Full name</div>
+                    <div className="font-medium text-gray-900 dark:text-white">{detail?.full_name ?? '-'}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">Email</div>
+                    <div className="font-medium text-gray-900 dark:text-white">{detail?.user?.email ?? '-'}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">DOB</div>
+                    <div className="font-medium text-gray-900 dark:text-white">{formatDate(detail?.date_of_birth)}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">Phone</div>
+                    <div className="font-medium text-gray-900 dark:text-white">{detail?.phone_number ?? '-'}</div>
+                  </div>
+                  <div className="md:col-span-2">
+                    <div className="text-sm text-gray-500 dark:text-gray-400">Address</div>
+                    <div className="mt-1">{detail?.address ?? '-'}{detail?.city ? `, ${detail.city}` : ''}{detail?.postal_code ? ` ${detail.postal_code}` : ''}{detail?.country ? `, ${detail.country}` : ''}</div>
+                  </div>
+                </div>
+
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">Document Type</div>
+                      <div className="mt-1 uppercase font-medium">{(detail?.document_type || '').replace('_', ' ')}</div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">Document No</div>
+                      <div className="mt-1 font-mono font-medium">{detail?.document_number ?? '-'}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Images */}
+                <div className="space-y-6">
+                  <h4 className="font-semibold text-gray-700 dark:text-gray-200">Verification Documents</h4>
+
+                  {/* Front */}
+                  {detail?.document_front_url ? (
+                    <div>
+                      <p className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-2">Front Side</p>
+                      <div onClick={() => window.open(detail.document_front_url!, '_blank')} className="group relative rounded-xl overflow-hidden cursor-pointer hover:shadow-xl transition">
+                        <Image src={detail.document_front_url!} alt="Document Front" width={600} height={400} unoptimized className="h-auto object-contain bg-gray-50 dark:bg-gray-900" />
+                        <div className="absolute inset-0 group-hover:bg-opacity-30 transition flex items-center justify-center">
+                          <ExternalLink className="text-white opacity-0 group-hover:opacity-100" size={36} />
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 bg-gray-50 dark:bg-gray-900 rounded-xl">
+                      <p className="text-gray-500 text-sm">Front document not available</p>
+                    </div>
+                  )}
+
+                  {/* Back */}
+                  {detail?.document_back_url && !detail?.document_type?.toLowerCase().includes('passport') ? (
+                    <div>
+                      <p className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-2">Back Side</p>
+                      <div onClick={() => window.open(detail.document_back_url!, '_blank')} className="group relative rounded-xl overflow-hidden cursor-pointer transition">
+                        <Image src={detail.document_back_url!} alt="Document Back" width={600} height={400} unoptimized className="h-auto object-contain bg-gray-50 dark:bg-gray-900" />
+                        <div className="absolute inset-0 group-hover:bg-opacity-30 transition flex items-center justify-center">
+                          <ExternalLink className="text-white opacity-0 group-hover:opacity-100" size={36} />
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {/* Selfie */}
+                  {detail?.selfie_url ? (
+                    <div>
+                      <p className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-2">Selfie Verification</p>
+                      <div onClick={() => window.open(detail.selfie_url!, '_blank')} className="group relative rounded-xl overflow-hidden cursor-pointer transition">
+                        <Image src={detail.selfie_url!} alt="Selfie" width={600} height={400} unoptimized className="h-auto object-contain rounded-xl bg-gray-50 dark:bg-gray-900" />
+                        <div className="absolute inset-0 group-hover:bg-opacity-30 transition flex items-center justify-center">
+                          <ExternalLink className="text-white opacity-0 group-hover:opacity-100" size={36} />
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 bg-gray-50 dark:bg-gray-900 rounded-xl">
+                      <p className="text-gray-500 text-sm">Selfie not available</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Footer meta */}
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-4 text-xs text-gray-500 dark:text-gray-300 space-y-2">
+                  <div className="flex justify-between">
+                    <span>Submitted:</span>
+                    <span>{formatDate(detail?.submitted_at)}</span>
+                  </div>
+                  {detail?.reviewed_at && (
+                    <div className="flex justify-between">
+                      <span>Reviewed:</span>
+                      <span>{formatDate(detail?.reviewed_at)}{detail?.reviewer ? ` by ${detail.reviewer}` : ''}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Actions */}
+            {adminKycState.detail && (
+              <div className="mt-4 flex items-center justify-end gap-3">
+                {detail?.status !== 'approved' && (
+                  <>
+                    {!showRejectInput ? (
+                      <>
+                        <button
+                          onClick={confirmApprove}
+                          disabled={actionLoading}
+                          className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 disabled:opacity-50"
+                        >
+                          {actionLoading ? 'Processing...' : 'Approve'}
+                        </button>
+                        <button
+                          onClick={() => setShowRejectInput(true)}
+                          disabled={actionLoading}
+                          className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 disabled:opacity-50"
+                        >
+                          Reject
+                        </button>
+                      </>
+                    ) : (
+                      <div className="w-full">
+                        <textarea
+                          value={rejectionReason}
+                          onChange={(e) => setRejectionReason(e.target.value)}
+                          placeholder="Enter rejection reason..."
+                          className="w-full border border-gray-300 rounded p-2 mb-2 dark:bg-gray-700 dark:border-gray-600"
+                          rows={3}
+                        />
+                        <div className="flex justify-end gap-2">
+                          <button
+                            onClick={() => {
+                              setShowRejectInput(false);
+                              setRejectionReason('');
+                            }}
+                            className="px-3 py-1 rounded-md border"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={confirmReject}
+                            disabled={actionLoading || !rejectionReason.trim()}
+                            className="bg-red-600 text-white px-3 py-1 rounded-md hover:bg-red-700 disabled:opacity-50"
+                          >
+                            {actionLoading ? 'Processing...' : 'Confirm Reject'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             )}

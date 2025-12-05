@@ -2,6 +2,8 @@
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchNetworks, createNetwork, updateNetwork } from '@/redux/thunk/networkThunks';
+import { unwrapResult } from '@reduxjs/toolkit';
+import { useAlert } from '../common/GlobalAlert';
 import { RootState, AppDispatch } from '@/redux/store';
 import { Skeleton } from '../ui/skeleton';
 import { Button } from '../ui/button';
@@ -29,6 +31,7 @@ interface Network {
 
 const ManageNetworks = () => {
     const dispatch = useDispatch<AppDispatch>();
+    const { showAlert } = useAlert();
     const { items, loading, error } = useSelector(
         (state: RootState) => state.networks
     );
@@ -57,9 +60,21 @@ const ManageNetworks = () => {
             is_active: networkData.is_active ?? true,
             requires_checksum: !!networkData.requires_checksum,
         };
-            dispatch(createNetwork(payload));
-        // refresh list after a small delay or let slice update items on fulfilled
-        // dispatch(fetchNetworks());
+        (async () => {
+            try {
+                const resultAction = await dispatch(createNetwork(payload));
+                unwrapResult(resultAction);
+                setIsModalOpen(false);
+                setActiveNetwork(null);
+                // refresh list
+                dispatch(fetchNetworks());
+                showAlert('Network created successfully', 'success');
+            } catch (err: any) {
+                const msg = err?.payload || err?.message || 'Failed to create network';
+                showAlert(typeof msg === 'string' ? msg : 'Failed to create network', 'error');
+                console.error('Failed to create network', err);
+            }
+        })();
     };
 
     const handleUpdateNetwork = (networkData: any) => {
@@ -74,7 +89,20 @@ const ManageNetworks = () => {
             is_active: networkData.is_active ?? true,
             requires_checksum: !!networkData.requires_checksum,
         };
-        dispatch(updateNetwork({ id: activeNetwork.id, ...payload }));
+        (async () => {
+            try {
+                const resultAction = await dispatch(updateNetwork({ id: activeNetwork.id, ...payload } as any));
+                unwrapResult(resultAction);
+                setIsModalOpen(false);
+                setActiveNetwork(null);
+                dispatch(fetchNetworks());
+                showAlert('Network updated successfully', 'success');
+            } catch (err: any) {
+                const msg = err?.payload || err?.message || 'Failed to update network';
+                showAlert(typeof msg === 'string' ? msg : 'Failed to update network', 'error');
+                console.error('Failed to update network', err);
+            }
+        })();
     };
 
     if (error) {

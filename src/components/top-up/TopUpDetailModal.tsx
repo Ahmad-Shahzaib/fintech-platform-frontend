@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { clearAdminTopUpDetailState } from '@/redux/slice/adminTopUpDetailSlice';
 
@@ -11,6 +11,8 @@ interface TopUpDetailModalProps {
 const TopUpDetailModal: React.FC<TopUpDetailModalProps> = ({ isOpen, onClose, topUpId }) => {
     const dispatch = useAppDispatch();
     const { data, loading, error } = useAppSelector((state) => state.adminTopUpDetail);
+
+    const [copied, setCopied] = useState(false);
 
     const handleClose = () => {
         dispatch(clearAdminTopUpDetailState());
@@ -175,7 +177,50 @@ const TopUpDetailModal: React.FC<TopUpDetailModalProps> = ({ isOpen, onClose, to
                                         </div>
                                         <div className="flex justify-between">
                                             <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Wallet Address</dt>
-                                            <dd className="text-sm text-gray-900 dark:text-gray-200 break-all">{data.wallet_address}</dd>
+                                                    <dd className="text-sm text-gray-900 dark:text-gray-200 break-all">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="break-all">{data.wallet_address}</span>
+                                                            <div className="flex items-center">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={async () => {
+                                                                        const text = String(data.wallet_address || '');
+                                                                        try {
+                                                                            if (navigator.clipboard && navigator.clipboard.writeText) {
+                                                                                await navigator.clipboard.writeText(text);
+                                                                            } else {
+                                                                                const ta = document.createElement('textarea');
+                                                                                ta.value = text;
+                                                                                document.body.appendChild(ta);
+                                                                                ta.select();
+                                                                                document.execCommand('copy');
+                                                                                document.body.removeChild(ta);
+                                                                            }
+                                                                            setCopied(true);
+                                                                            setTimeout(() => setCopied(false), 2000);
+                                                                        } catch (err) {
+                                                                            // ignore copy errors silently
+                                                                        }
+                                                                    }}
+                                                                    aria-label="Copy wallet address"
+                                                                    className="inline-flex items-center justify-center p-2 rounded text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800"
+                                                                    role="button"
+                                                                >
+                                                                    {copied ? (
+                                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-600" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                                                                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 00-1.414-1.414L8 11.172l-3.293-3.293a1 1 0 00-1.414 1.414l4 4a1 1 0 001.414 0l8-8z" clipRule="evenodd" />
+                                                                        </svg>
+                                                                    ) : (
+                                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2" />
+                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 8v8a2 2 0 01-2 2H8" />
+                                                                        </svg>
+                                                                    )}
+                                                                </button>
+                                                                {/* Inline copy message removed - copy still occurs and icon updates */}
+                                                            </div>
+                                                        </div>
+                                                    </dd>
                                         </div>
                                         <div className="flex justify-between">
                                             <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Address Validated</dt>

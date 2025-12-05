@@ -5,6 +5,8 @@ import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import { fetchCurrencies } from '../../redux/thunk/currencyThunks';
 import { fetchNetworks } from '../../redux/thunk/networkThunks';
 import { createCurrencyNetwork, CurrencyNetworkDetail } from '../../redux/thunk/currencyNetworkThunks';
+import { unwrapResult } from '@reduxjs/toolkit';
+import { useAlert } from '../common/GlobalAlert';
 import { clearCreate } from '../../redux/slice/currencyNetworkCreateSlice';
 import { fetchCurrencyNetworks } from '../../redux/slice/currencyNetworksSlice';
 import { Button } from '../ui/button';
@@ -14,6 +16,7 @@ export default function AddCurrencyNetworkModal({ open, onClose }: { open: boole
   const currencies = useAppSelector((s) => (s as any).currencies?.items ?? []);
   const networks = useAppSelector((s) => (s as any).networks?.items ?? []);
   const createState = useAppSelector((s) => (s as any).currencyNetworkCreate ?? { data: null, loading: false, error: null });
+  const { showAlert } = useAlert();
 
   const [form, setForm] = useState({
     currency_id: '',
@@ -69,7 +72,28 @@ export default function AddCurrencyNetworkModal({ open, onClose }: { open: boole
       is_active: form.is_active ? 1 : 0,
     };
 
-    dispatch(createCurrencyNetwork(payload));
+    try {
+      const resultAction = await dispatch(createCurrencyNetwork(payload as any));
+      unwrapResult(resultAction);
+      // on success
+      setForm({
+        currency_id: '',
+        network_id: '',
+        contract_address: '',
+        min_transaction_amount: '',
+        max_transaction_amount: '',
+        network_fee_estimate_aud: '',
+        is_active: true,
+      });
+      dispatch(fetchCurrencyNetworks());
+      dispatch(clearCreate());
+      onClose();
+      showAlert('Currency & Network created successfully', 'success');
+    } catch (err: any) {
+      const msg = err?.payload || err?.message || 'Failed to create currency network';
+      showAlert(typeof msg === 'string' ? msg : 'Failed to create currency network', 'error');
+      console.error('Failed to create currency network', err);
+    }
   };
 
   if (!open) return null;

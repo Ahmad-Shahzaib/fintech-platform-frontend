@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 import { fetchAdminPendingKyc, approveAdminKyc, rejectAdminKyc, fetchAdminKycDetail } from '@/redux/thunk/adminKycThunks'
+import { useAlert } from '@/components/common/GlobalAlert'
 
 interface KYCDetail {
     id: number
@@ -71,6 +72,7 @@ export function KYCRequestsTable() {
     const [showRejectModal, setShowRejectModal] = useState(false)
     const [currentActionId, setCurrentActionId] = useState<number | null>(null)
     const [rejectionReason, setRejectionReason] = useState("")
+    const { showAlert } = useAlert()
 
     // Build base list from admin API when available, otherwise return empty array
     const baseRequests = useMemo(() => {
@@ -103,17 +105,48 @@ export function KYCRequestsTable() {
         setRejectionReason("")
     }
 
-    const confirmApprove = () => {
-        if (currentActionId) {
-            dispatch(approveAdminKyc(currentActionId))
+    const confirmApprove = async () => {
+        if (!currentActionId) return
+        try {
+            const action: any = await dispatch(approveAdminKyc(currentActionId))
+            if (action.type && action.type.endsWith('/fulfilled')) {
+                showAlert('KYC approved', 'success')
+                // refresh pending list
+                dispatch(fetchAdminPendingKyc())
+            } else {
+                const msg = (action.payload as any) || (action.error && action.error.message) || 'Failed to approve KYC'
+                showAlert(msg, 'error')
+            }
+        } catch (err) {
+            // eslint-disable-next-line no-console
+            console.error('approve error', err)
+            showAlert('Failed to approve KYC. See console for details.', 'error')
+        } finally {
             setShowApproveModal(false)
             setCurrentActionId(null)
         }
     }
 
-    const confirmReject = () => {
-        if (currentActionId) {
-            dispatch(rejectAdminKyc({ id: currentActionId, rejection_reason: rejectionReason.trim() }))
+    const confirmReject = async () => {
+        if (!currentActionId) return
+        if (!rejectionReason.trim()) {
+            showAlert('Please provide a rejection reason', 'warning')
+            return
+        }
+        try {
+            const action: any = await dispatch(rejectAdminKyc({ id: currentActionId, rejection_reason: rejectionReason.trim() }))
+            if (action.type && action.type.endsWith('/fulfilled')) {
+                showAlert('KYC rejected', 'success')
+                dispatch(fetchAdminPendingKyc())
+            } else {
+                const msg = (action.payload as any) || (action.error && action.error.message) || 'Failed to reject KYC'
+                showAlert(msg, 'error')
+            }
+        } catch (err) {
+            // eslint-disable-next-line no-console
+            console.error('reject error', err)
+            showAlert('Failed to reject KYC. See console for details.', 'error')
+        } finally {
             setShowRejectModal(false)
             setCurrentActionId(null)
             setRejectionReason("")
@@ -171,12 +204,12 @@ export function KYCRequestsTable() {
             } else {
                 // eslint-disable-next-line no-console
                 console.error('Failed to load KYC detail', action.payload || action.error)
-                alert('Failed to load KYC details.')
+                showAlert('Failed to load KYC details.', 'error')
             }
         } catch (err) {
             // eslint-disable-next-line no-console
             console.error('Failed to fetch KYC detail', err)
-            alert('Failed to load KYC details. See console for details.')
+            showAlert('Failed to load KYC details. See console for details.', 'error')
         } finally {
             setDetailLoading(false)
         }
@@ -495,7 +528,7 @@ export function KYCRequestsTable() {
 
             {/* Beautiful Compact Modal - Images in Vertical Order */}
             {selectedDetail && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 ">
+                <div className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-black/60 ">
                     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[80vh] overflow-y-auto">
                         {/* Header */}
                         <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">

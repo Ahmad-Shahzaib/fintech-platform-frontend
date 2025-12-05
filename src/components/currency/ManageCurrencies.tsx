@@ -2,6 +2,8 @@
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchCurrencies, addCurrency, updateCurrency } from '@/redux/thunk/currencyThunks';
+import { unwrapResult } from '@reduxjs/toolkit';
+import { useAlert } from '../common/GlobalAlert';
 import CurrencyDetailModal from './CurrencyDetailModal';
 import { RootState, AppDispatch } from '@/redux/store';
 import { Skeleton } from '../ui/skeleton';
@@ -29,6 +31,7 @@ interface Currency {
 
 const ManageCurrencies = () => {
     const dispatch = useDispatch<AppDispatch>();
+    const { showAlert } = useAlert();
     const { items, loading, error } = useSelector(
         (state: RootState) => state.currencies
     );
@@ -47,11 +50,15 @@ const ManageCurrencies = () => {
         // Dispatch addCurrency thunk, then refresh list on success
         (async () => {
             try {
-                await dispatch(addCurrency(currencyData));
+                const resultAction = await dispatch(addCurrency(currencyData));
+                unwrapResult(resultAction);
                 setModalMode(null);
                 // Refresh to ensure latest data (optional if backend returns full object)
                 dispatch(fetchCurrencies());
-            } catch (err) {
+                showAlert('Currency created successfully', 'success');
+            } catch (err: any) {
+                const msg = err?.payload || err?.message || 'Failed to add currency';
+                showAlert(typeof msg === 'string' ? msg : 'Failed to add currency', 'error');
                 console.error('Failed to add currency', err);
             }
         })();
@@ -60,11 +67,15 @@ const ManageCurrencies = () => {
     const handleUpdateCurrency = (id: number, currencyData: any) => {
         (async () => {
             try {
-                await dispatch(updateCurrency({ id, payload: currencyData }));
+                const resultAction = await dispatch(updateCurrency({ id, payload: currencyData }));
+                unwrapResult(resultAction);
                 setModalMode(null);
                 setSelectedCurrency(null);
                 dispatch(fetchCurrencies());
-            } catch (err) {
+                showAlert('Currency updated successfully', 'success');
+            } catch (err: any) {
+                const msg = err?.payload || err?.message || 'Failed to update currency';
+                showAlert(typeof msg === 'string' ? msg : 'Failed to update currency', 'error');
                 console.error('Failed to update currency', err);
             }
         })();
