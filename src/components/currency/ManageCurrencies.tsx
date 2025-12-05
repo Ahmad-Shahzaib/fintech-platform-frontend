@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchCurrencies, addCurrency, updateCurrency } from '@/redux/thunk/currencyThunks';
+import { fetchCurrencies, addCurrency, updateCurrency, fetchCurrencyDetail } from '@/redux/thunk/currencyThunks';
 import { unwrapResult } from '@reduxjs/toolkit';
 import { useAlert } from '../common/GlobalAlert';
 import CurrencyDetailModal from './CurrencyDetailModal';
@@ -32,19 +32,31 @@ interface Currency {
 const ManageCurrencies = () => {
     const dispatch = useDispatch<AppDispatch>();
     const { showAlert } = useAlert();
-    const { items, loading, error } = useSelector(
-        (state: RootState) => state.currencies
-    );
+    const currenciesState = useSelector((state: RootState) => state.currencies);
+    const { items, loading, error, current } = currenciesState as any;
     const currencies = (items || []) as Currency[];
     const [modalMode, setModalMode] = useState<null | 'add' | 'edit'>(null);
     const [selectedCurrency, setSelectedCurrency] = useState<Currency | null>(null);
     const [openMenuId, setOpenMenuId] = useState<number | null>(null);
     const [detailOpen, setDetailOpen] = useState(false);
     const [detailId, setDetailId] = useState<number | null>(null);
+    const [pendingEditId, setPendingEditId] = useState<number | null>(null);
 
     useEffect(() => {
         dispatch(fetchCurrencies());
     }, [dispatch]);
+
+    // When an edit is requested, wait until the detailed `current` matches the pending id,
+    // then open the edit modal with the full detail so fields like `icon_url`, `min_amount`,
+    // `max_amount`, and `sort_order` are available.
+    useEffect(() => {
+        if (pendingEditId && (current as any) && (current as any).id === pendingEditId) {
+            setModalMode('edit');
+            // ensure selectedCurrency points to the detailed object so AddCurrencyModal gets full data
+            setSelectedCurrency(current as any);
+            setPendingEditId(null);
+        }
+    }, [pendingEditId, current]);
 
     const handleAddCurrency = (currencyData: any) => {
         // Dispatch addCurrency thunk, then refresh list on success
@@ -222,8 +234,15 @@ const ManageCurrencies = () => {
                                                     <button
                                                         className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-300"
                                                         onClick={() => {
+                                                            // Start fetching detailed currency data, open modal when it arrives
                                                             setSelectedCurrency(currency);
-                                                            setModalMode('edit');
+                                                            setPendingEditId(currency.id);
+                                                            try {
+                                                                // eslint-disable-next-line @typescript-eslint/no-floating-promises
+                                                                (dispatch as any)(fetchCurrencyDetail(currency.id));
+                                                            } catch (e) {
+                                                                // ignore
+                                                            }
                                                             setOpenMenuId(null);
                                                         }}
                                                     >
@@ -242,7 +261,11 @@ const ManageCurrencies = () => {
             
             <AddCurrencyModal
                 isOpen={modalMode !== null}
-                initialData={modalMode === 'edit' ? selectedCurrency ?? undefined : undefined}
+                initialData={
+                    modalMode === 'edit'
+                        ? (current && selectedCurrency && current.id === selectedCurrency.id ? current : selectedCurrency) ?? undefined
+                        : undefined
+                }
                 submitLabel={modalMode === 'edit' ? 'Update Currency' : 'Add Currency'}
                 onClose={() => { setModalMode(null); setSelectedCurrency(null); }}
                 onSubmit={(data: any) => {

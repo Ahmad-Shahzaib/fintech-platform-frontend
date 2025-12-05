@@ -4,6 +4,7 @@ import { AxiosError } from 'axios';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { createTopUpRequest } from '@/redux/thunk/topUpThunks';
 import { fetchCurrencies } from '@/redux/thunk/currencyThunks';
+import { useAlert } from '@/components/common/GlobalAlert';
 
 // Currency and network lists are loaded dynamically from the API
 
@@ -43,6 +44,7 @@ export default function TopUpRequest() {
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const dispatch = useAppDispatch();
+  const { showAlert } = useAlert();
 
   const currencies = useAppSelector((s) => s.currencies?.items ?? []);
 
@@ -155,6 +157,11 @@ export default function TopUpRequest() {
       if (createTopUpRequest.fulfilled.match(resultAction)) {
         // success
         setIsSubmitting(false);
+        try {
+          showAlert('Top-up request submitted successfully', 'success');
+        } catch (e) {
+          // ignore if AlertProvider is not present
+        }
         const respData = resultAction.payload?.data ?? resultAction.payload;
         try {
           const now = new Date();
@@ -191,12 +198,22 @@ export default function TopUpRequest() {
         setIsSubmitting(false);
         const message = (resultAction.payload as string) || (resultAction.error?.message) || 'Failed to submit top-up request';
         setErrors(prev => ({ ...prev, submit: message }));
+        try {
+          showAlert(message, 'error');
+        } catch (e) {
+          // ignore
+        }
       }
     } catch (error) {
       setIsSubmitting(false);
       const axiosError = error as AxiosError;
       const errorMessage = (axiosError?.response?.data as any)?.message || axiosError?.message || 'An error occurred while submitting your request';
       setErrors(prev => ({ ...prev, submit: errorMessage }));
+      try {
+        showAlert(errorMessage, 'error');
+      } catch (e) {
+        // ignore
+      }
     }
   };
 

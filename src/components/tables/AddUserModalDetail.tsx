@@ -348,32 +348,34 @@ const AddUserModalDetail = () => {
                                                                     </svg>
                                                                     View Details
                                                                 </button>
-                                                                <button
-                                                                    onClick={() => {
-                                                                        blockUser(user.id);
-                                                                        setOpenDropdownId(null);
-                                                                    }}
-                                                                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-red-600 dark:text-red-400 transition-colors flex items-center"
-                                                                >
-                                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                                        <circle cx="12" cy="12" r="10" />
-                                                                        <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
-                                                                    </svg>
-                                                                    Block
-                                                                </button>
-
-                                                                <button
-                                                                    onClick={() => {
-                                                                        unblockUser(user.id);
-                                                                        setOpenDropdownId(null);
-                                                                    }}
-                                                                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-green-600 dark:text-green-400 transition-colors flex items-center"
-                                                                >
-                                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                                        <path d="M5 13l4 4L19 7" />
-                                                                    </svg>
-                                                                    Unblock
-                                                                </button>
+                                                                {isActive ? (
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            blockUser(user.id);
+                                                                            setOpenDropdownId(null);
+                                                                        }}
+                                                                        className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-red-600 dark:text-red-400 transition-colors flex items-center"
+                                                                    >
+                                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                                            <circle cx="12" cy="12" r="10" />
+                                                                            <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+                                                                        </svg>
+                                                                        Block
+                                                                    </button>
+                                                                ) : (
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            unblockUser(user.id);
+                                                                            setOpenDropdownId(null);
+                                                                        }}
+                                                                        className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-green-600 dark:text-green-400 transition-colors flex items-center"
+                                                                    >
+                                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                                            <path d="M5 13l4 4L19 7" />
+                                                                        </svg>
+                                                                        Unblock
+                                                                    </button>
+                                                                )}
                                                                 <button
                                                                     onClick={() => {
                                                                         openLimitModal(user);

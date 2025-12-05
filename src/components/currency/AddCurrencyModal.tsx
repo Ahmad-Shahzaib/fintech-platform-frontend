@@ -47,18 +47,28 @@ const AddCurrencyModal: React.FC<AddCurrencyModalProps> = ({ isOpen, onClose, on
 
   useEffect(() => {
     if (isOpen && initialData) {
+      // Helper to pick first non-null field from multiple possible backend keys
+      const pick = (obj: any, keys: string[]) => {
+        for (const k of keys) {
+          if (obj && Object.prototype.hasOwnProperty.call(obj, k) && obj[k] !== undefined && obj[k] !== null) {
+            return obj[k];
+          }
+        }
+        return undefined;
+      };
+
       // Map incoming initial data into string fields expected by the form
       setFormData({
-        code: initialData.code ?? '',
-        name: initialData.name ?? '',
-        symbol: initialData.symbol ?? '',
-        description: initialData.description ?? '',
-        decimals: initialData.decimals !== undefined && initialData.decimals !== null ? String(initialData.decimals) : '',
-        icon_url: initialData.icon_url ?? '',
-        is_active: initialData.is_active ?? true,
-        min_amount: initialData.min_amount !== undefined && initialData.min_amount !== null ? String(initialData.min_amount) : '',
-        max_amount: initialData.max_amount !== undefined && initialData.max_amount !== null ? String(initialData.max_amount) : '',
-        sort_order: initialData.sort_order !== undefined && initialData.sort_order !== null ? String(initialData.sort_order) : '',
+        code: pick(initialData, ['code', 'symbol_code', 'currency_code']) ?? '',
+        name: pick(initialData, ['name', 'currency_name']) ?? '',
+        symbol: pick(initialData, ['symbol']) ?? '',
+        description: pick(initialData, ['description', 'desc']) ?? '',
+        decimals: pick(initialData, ['decimals']) !== undefined ? String(pick(initialData, ['decimals'])) : '',
+        icon_url: pick(initialData, ['icon_url', 'icon', 'logo']) ?? '',
+        is_active: pick(initialData, ['is_active', 'active', 'enabled']) ?? true,
+        min_amount: pick(initialData, ['min_amount', 'min_deposit', 'minimum', 'min', 'min_amount_aud']) !== undefined ? String(pick(initialData, ['min_amount', 'min_deposit', 'minimum', 'min', 'min_amount_aud'])) : '',
+        max_amount: pick(initialData, ['max_amount', 'max_deposit', 'maximum', 'max', 'max_amount_aud']) !== undefined ? String(pick(initialData, ['max_amount', 'max_deposit', 'maximum', 'max', 'max_amount_aud'])) : '',
+        sort_order: pick(initialData, ['sort_order', 'sort', 'order', 'position']) !== undefined ? String(pick(initialData, ['sort_order', 'sort', 'order', 'position'])) : '',
       });
     }
     if (!isOpen) {

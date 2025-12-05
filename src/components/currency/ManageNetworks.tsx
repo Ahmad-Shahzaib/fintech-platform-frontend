@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchNetworks, createNetwork, updateNetwork } from '@/redux/thunk/networkThunks';
+import { fetchNetworks, fetchNetworkById, createNetwork, updateNetwork } from '@/redux/thunk/networkThunks';
 import { unwrapResult } from '@reduxjs/toolkit';
 import { useAlert } from '../common/GlobalAlert';
 import { RootState, AppDispatch } from '@/redux/store';
@@ -103,6 +103,20 @@ const ManageNetworks = () => {
                 console.error('Failed to update network', err);
             }
         })();
+    };
+
+    const handleOpenEdit = async (id: number) => {
+        try {
+            const resultAction = await dispatch(fetchNetworkById(id) as any);
+            const fullNetwork = unwrapResult(resultAction) as Network;
+            setActiveNetwork(fullNetwork);
+            setModalMode('edit');
+            setIsModalOpen(true);
+        } catch (err: any) {
+            const msg = err?.payload || err?.message || 'Failed to load network details';
+            showAlert(typeof msg === 'string' ? msg : 'Failed to load network details', 'error');
+            console.error('Failed to fetch network details', err);
+        }
     };
 
     if (error) {
@@ -225,7 +239,7 @@ const ManageNetworks = () => {
                                                                     </button>
                                                             <button
                                                                 className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-300"
-                                                                onClick={() => { setModalMode('edit'); setActiveNetwork(network); setIsModalOpen(true); setOpenMenuFor(null); }}
+                                                                onClick={() => { handleOpenEdit(network.id); setOpenMenuFor(null); }}
                                                             >
                                                                 Update
                                                             </button>
