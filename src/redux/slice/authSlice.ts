@@ -12,6 +12,8 @@ interface AuthState {
   resendLoading: boolean;
   resendError: string | null;
   resendMessage: string | null;
+  // store profile image url/name for quick access
+  profile_image: string | null;
 }
 
 const initialState: AuthState = {
@@ -22,6 +24,7 @@ const initialState: AuthState = {
   resendLoading: false,
   resendError: null,
   resendMessage: null,
+  profile_image: null,
 };
 
 export const registerUserPending = createAction('auth/registerUser/pending');
@@ -49,6 +52,8 @@ const authSlice = createSlice({
         // action.payload may be { user, token } (we normalized it in the thunk)
         state.user = action.payload?.user ?? action.payload;
         state.token = action.payload?.token ?? state.token;
+        // ensure profile_image is available on the top-level slice state (use avatar from User)
+        state.profile_image = state.user?.avatar ?? null;
         state.error = null;
       })
       .addCase(registerUser.rejected, (state, action) => {
@@ -65,6 +70,7 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.user = action.payload.user;
         state.token = action.payload.token;
+        state.profile_image = state.user?.avatar ?? null;
         state.error = null;
       })
       .addCase(loginUser.rejected, (state, action) => {

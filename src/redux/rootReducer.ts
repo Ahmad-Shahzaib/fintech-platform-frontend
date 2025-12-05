@@ -24,6 +24,7 @@ import updatePasswordReducer from './slice/updatePasswordSlice';
 import submitPaymentReducer from './slice/submitPaymentSlice';
 import faqsReducer from './slice/faqsSlice';
 import adminStatsReducer from './slice/adminStatsSlice';
+import adminLatestTopUpsReducer from './slice/adminLatestTopUpsSlice';
 
 // New reducer
 
@@ -52,6 +53,7 @@ const rootReducer = combineReducers({
   submitPayment: submitPaymentReducer,
   faqs: faqsReducer,
   adminStats: adminStatsReducer,
+  adminLatestTopUps: adminLatestTopUpsReducer,
   
 
 

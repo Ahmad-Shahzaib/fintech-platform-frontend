@@ -4,9 +4,11 @@ import { useSidebar } from "@/context/SidebarContext";
 import AppHeader from "@/layout/AppHeader";
 import AppSidebar from "@/layout/AppSidebar";
 import Backdrop from "@/layout/Backdrop";
-import React from "react";
+import React, { useEffect } from "react";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { UserRole } from "@/types/auth";
+import { useAppDispatch } from '@/redux/hooks';
+import { fetchAdminLatestTopUps } from '@/redux/thunk/adminLatestTopUpsThunks';
 
 export default function AdminLayout({
   children,
@@ -14,6 +16,16 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const { isExpanded, isHovered, isMobileOpen } = useSidebar();
+  const dispatch = useAppDispatch();
+
+  // Fetch latest top-ups for admin dashboard on mount
+  useEffect(() => {
+    try {
+      dispatch(fetchAdminLatestTopUps());
+    } catch (e) {
+      // swallow; thunk will handle errors
+    }
+  }, [dispatch]);
 
   // Dynamic class for main content margin based on sidebar state
   const mainContentMargin = isMobileOpen
@@ -41,3 +53,4 @@ export default function AdminLayout({
     </ProtectedRoute>
   );
 }
+

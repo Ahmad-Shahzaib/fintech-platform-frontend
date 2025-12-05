@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { fetchTopUps } from '@/redux/thunk/topUpsThunks';
+import { fetchAdminLatestTopUps } from '@/redux/thunk/adminLatestTopUpsThunks';
 import { X, ExternalLink, Copy, Check } from 'lucide-react';
 
 type TopUp = {
@@ -17,7 +18,11 @@ type TopUp = {
   adminNotes?: string | null;
 };
 
-const RecentOrders = () => {
+type Props = {
+  admin?: boolean;
+};
+
+const RecentOrders = ({ admin = false }: Props) => {
   const [selectedTopUp, setSelectedTopUp] = useState<TopUp | null>(null);
   const dispatch = useAppDispatch();
   // page and status for server pagination
@@ -25,20 +30,30 @@ const RecentOrders = () => {
   const status = 'pending';
 
   // Read top-ups from redux store (server)
-  const topUpsItems = useAppSelector((s) => s.topUps?.items ?? []);
-  const pagination = useAppSelector((s) => s.topUps?.pagination ?? null);
-  const loading = useAppSelector((s) => s.topUps?.loading ?? false);
-  const error = useAppSelector((s) => s.topUps?.error ?? null);
+  const topUpsItems = useAppSelector((s) => (admin ? s.adminLatestTopUps?.items ?? [] : s.topUps?.items ?? []));
+  const pagination = useAppSelector((s) => (admin ? null : s.topUps?.pagination ?? null));
+  const loading = useAppSelector((s) => (admin ? s.adminLatestTopUps?.loading ?? false : s.topUps?.loading ?? false));
+  const error = useAppSelector((s) => (admin ? s.adminLatestTopUps?.error ?? null : s.topUps?.error ?? null));
   const [copiedWallet, setCopiedWallet] = useState(false);
   const [copiedTxHash, setCopiedTxHash] = useState(false);
 
   useEffect(() => {
-    // load top-ups from API via redux
-    dispatch(fetchTopUps({ status, page }));
+    // load top-ups from API via redux (user) or admin latest (admin)
+    if (admin) {
+      // latest endpoint does not accept pagination in our implementation
+      // dispatching here ensures the component has data if layout didn't fetch
+      dispatch(fetchAdminLatestTopUps());
+    } else {
+      dispatch(fetchTopUps({ status, page }));
+    }
 
     const onAdded = (e: Event) => {
       // when a new top-up is added elsewhere, refresh the list from server
-      dispatch(fetchTopUps({ status, page }));
+      if (admin) {
+        dispatch(fetchAdminLatestTopUps());
+      } else {
+        dispatch(fetchTopUps({ status, page }));
+      }
     };
 
     window.addEventListener('topup:added', onAdded as EventListener);
@@ -136,12 +151,20 @@ const RecentOrders = () => {
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                 {(topUpsItems || []).map((raw: any) => {
                   // normalize server item to local TopUp type
+                  const coinVal = (raw.currency && typeof raw.currency === 'object')
+                    ? (raw.currency.code || raw.currency.name || '')
+                    : (raw.currency || raw.coin || '');
+
+                  const networkVal = (raw.network && typeof raw.network === 'object')
+                    ? (raw.network.name || raw.network.code || raw.network.full_name || '')
+                    : (raw.network || '');
+
                   const topUp: TopUp = {
                     id: raw.transaction_id ?? String(raw.id),
                     date: raw.created_at ?? '',
                     amount: parseFloat(raw.amount_aud ?? '0'),
-                    coin: raw.currency ?? raw.coin ?? '',
-                    network: raw.network ?? '',
+                    coin: coinVal,
+                    network: networkVal,
                     status: (raw.status as any) ?? 'pending',
                     walletAddress: raw.wallet_address ?? raw.walletAddress ?? '',
                     transactionHash: raw.transaction_hash ?? raw.transactionHash ?? null,
@@ -186,10 +209,16 @@ const RecentOrders = () => {
         // Ensure the slide-over sits above the header which uses a high z-index
         <div className="fixed inset-0 z-[100000] flex">
           {/* backdrop */}
-          <div className="fixed inset-0 " onClick={() => setSelectedTopUp(null)} />
+          <div className="fixed inset-0 z-40" onClick={() => setSelectedTopUp(null)} />
 
           {/* slide over */}
-          <section role="dialog" aria-modal="true" className="ml-auto w-full max-w-sm bg-white dark:bg-gray-800 h-full shadow-xl overflow-y-auto" aria-label="Top Up details panel">
+          <section
+            role="dialog"
+            aria-modal="true"
+            className="ml-auto w-full max-w-sm bg-white dark:bg-gray-800 h-full shadow-xl overflow-y-auto z-50 relative"
+            aria-label="Top Up details panel"
+            onClick={(e) => e.stopPropagation()} // prevent backdrop from receiving clicks inside the panel
+          >
             <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Top-Up Details</h2>
@@ -226,7 +255,15 @@ const RecentOrders = () => {
                 <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-700 rounded-md p-2 border border-gray-200 dark:border-gray-700">
                   <p className="text-xs font-mono text-gray-900 dark:text-gray-100 break-words truncate">{selectedTopUp.walletAddress}</p>
                   <div className="ml-auto flex items-center gap-2">
-                    <button title="Copy wallet address" onClick={() => copyToClipboard(selectedTopUp.walletAddress, setCopiedWallet)} className="text-gray-400 dark:text-gray-300 hover:text-gray-600">
+                    <button
+                      title="Copy wallet address"
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        copyToClipboard(selectedTopUp.walletAddress, setCopiedWallet);
+                      }}
+                      className="text-gray-400 dark:text-gray-300 hover:text-gray-600"
+                    >
                       {copiedWallet ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
                     </button>
                   </div>
@@ -244,7 +281,15 @@ const RecentOrders = () => {
                   <div className="bg-gray-50 rounded-md p-2 border border-gray-200 flex items-center gap-2">
                     <p className="text-xs font-mono text-gray-900 break-words truncate">{selectedTopUp.transactionHash}</p>
                     <div className="ml-auto flex items-center gap-2">
-                      <button title="Copy transaction hash" onClick={() => copyToClipboard(selectedTopUp.transactionHash || '', setCopiedTxHash)} className="text-gray-400 hover:text-gray-600">
+                      <button
+                        title="Copy transaction hash"
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          copyToClipboard(selectedTopUp.transactionHash || '', setCopiedTxHash);
+                        }}
+                        className="text-gray-400 hover:text-gray-600"
+                      >
                         {copiedTxHash ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
                       </button>
                       {explorerUrl && (
