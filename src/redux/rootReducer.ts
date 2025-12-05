@@ -23,6 +23,7 @@ import currencyNetworkUpdateReducer from './slice/currencyNetworkUpdateSlice';
 import updatePasswordReducer from './slice/updatePasswordSlice';
 import submitPaymentReducer from './slice/submitPaymentSlice';
 import faqsReducer from './slice/faqsSlice';
+import adminStatsReducer from './slice/adminStatsSlice';
 
 // New reducer
 
@@ -50,6 +51,7 @@ const rootReducer = combineReducers({
   updatePassword: updatePasswordReducer,
   submitPayment: submitPaymentReducer,
   faqs: faqsReducer,
+  adminStats: adminStatsReducer,
   
 
 

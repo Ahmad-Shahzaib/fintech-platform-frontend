@@ -1,8 +1,10 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import { ArrowUpIcon, ArrowDownIcon } from "@/icons"; // Assuming you have these
 import { useAuth } from "@/context/AuthContext";
+import { useAppDispatch, useAppSelector } from '@/redux/hooks';
+import { fetchAdminStats } from '@/redux/slice/adminStatsSlice';
 import { UserRole } from "@/types/auth";
 
 // Simple badge component (you can replace with your existing Badge if preferred)
@@ -109,6 +111,16 @@ export const EcommerceMetrics = ({ kycStatus, isAdmin }: { kycStatus?: string | 
 
   const resolvedIsAdmin = typeof isAdmin === 'boolean' ? isAdmin : (user?.role === UserRole.ADMIN);
 
+  // fetch admin stats when admin view
+  const dispatch = useAppDispatch();
+  const adminStats = useAppSelector((s) => s.adminStats);
+
+  useEffect(() => {
+    if (resolvedIsAdmin) {
+      dispatch(fetchAdminStats());
+    }
+  }, [resolvedIsAdmin, dispatch]);
+
   const userCards = [
     {
       name: "Total Topup Amount",
@@ -134,14 +146,15 @@ export const EcommerceMetrics = ({ kycStatus, isAdmin }: { kycStatus?: string | 
   ];
 
   const adminCards = [
-    { name: "Total User", price: "0", change: null },
-    { name: "Total Currencies", price: "0", change: null },
-    { name: "Total Networks", price: "0", change: null },
-    { name: "Total Top Ups Request", price: "0", change: null },
-    { name: "KYC Pending Approvals", price: "0", change: null },
+    { name: "Total User", price: String(adminStats?.data?.total_users ?? 0), change: null },
+    { name: "Total Currencies", price: String(adminStats?.data?.total_currencies ?? 0), change: null },
+    { name: "Total Networks", price: String(adminStats?.data?.total_networks ?? 0), change: null },
+    { name: "Total Top Ups Request", price: String(adminStats?.data?.total_topups ?? 0), change: null },
+    { name: "KYC Pending Approvals", price: String(adminStats?.data?.kyc?.pending ?? 0), change: null },
   ];
 
   const cryptos = resolvedIsAdmin ? adminCards : userCards;
+
 
   return (
     <div className={resolvedIsAdmin ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6" : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6"}>
