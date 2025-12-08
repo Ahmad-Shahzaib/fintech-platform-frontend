@@ -1,131 +1,94 @@
 // pages/payment-history.js
 "use client";
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Head from 'next/head';
+import { useAppDispatch, useAppSelector } from '@/redux/hooks';
+import { fetchMyProofs } from '@/redux/thunk/paymentProofsThunks';
+import { useModal } from '../../hooks/useModal';
+import { Modal } from '../ui/modal';
 
 const PaymentHistoryPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
 
-  // Sample payment data
-  const payments = [
-    {
-      id: 'PAY-001',
-      date: '2023-10-15',
-      description: 'Premium Plan Subscription',
-      amount: 29.99,
-      status: 'completed',
-      method: 'Credit Card (****1234)',
-      invoice: 'INV-2023-001'
-    },
-    {
-      id: 'PAY-002',
-      date: '2023-09-15',
-      description: 'Premium Plan Subscription',
-      amount: 29.99,
-      status: 'completed',
-      method: 'Credit Card (****1234)',
-      invoice: 'INV-2023-002'
-    },
-    {
-      id: 'PAY-003',
-      date: '2023-08-15',
-      description: 'Premium Plan Subscription',
-      amount: 29.99,
-      status: 'completed',
-      method: 'Credit Card (****1234)',
-      invoice: 'INV-2023-003'
-    },
-    {
-      id: 'PAY-004',
-      date: '2023-07-15',
-      description: 'Premium Plan Subscription',
-      amount: 29.99,
-      status: 'completed',
-      method: 'Credit Card (****1234)',
-      invoice: 'INV-2023-004'
-    },
-    {
-      id: 'PAY-005',
-      date: '2023-06-15',
-      description: 'Premium Plan Subscription',
-      amount: 29.99,
-      status: 'completed',
-      method: 'Credit Card (****1234)',
-      invoice: 'INV-2023-005'
-    },
-    {
-      id: 'PAY-006',
-      date: '2023-05-15',
-      description: 'Premium Plan Subscription',
-      amount: 29.99,
-      status: 'completed',
-      method: 'Credit Card (****1234)',
-      invoice: 'INV-2023-006'
-    },
-    {
-      id: 'PAY-007',
-      date: '2023-04-15',
-      description: 'Premium Plan Subscription',
-      amount: 29.99,
-      status: 'failed',
-      method: 'Credit Card (****1234)',
-      invoice: 'INV-2023-007'
-    },
-    {
-      id: 'PAY-008',
-      date: '2023-03-15',
-      description: 'Premium Plan Subscription',
-      amount: 29.99,
-      status: 'completed',
-      method: 'Credit Card (****1234)',
-      invoice: 'INV-2023-008'
-    },
-    {
-      id: 'PAY-009',
-      date: '2023-02-15',
-      description: 'Premium Plan Subscription',
-      amount: 29.99,
-      status: 'completed',
-      method: 'Credit Card (****1234)',
-      invoice: 'INV-2023-009'
-    },
-    {
-      id: 'PAY-010',
-      date: '2023-01-15',
-      description: 'Premium Plan Subscription',
-      amount: 29.99,
-      status: 'completed',
-      method: 'Credit Card (****1234)',
-      invoice: 'INV-2023-010'
+  const dispatch = useAppDispatch();
+
+  // Format payment method keys/objects into user-friendly labels
+  const formatMethod = (method?: any) => {
+    if (method === undefined || method === null) return '';
+
+    // If API provides a human readable field, it will be passed as a string (e.g. "Bank Transfer").
+    // Some responses use a numeric id for `payment_method` and also include `payment_method_name`.
+    // Handle: string, object { name }, number id.
+    if (typeof method === 'string') {
+      return method;
     }
-  ];
+
+    if (typeof method === 'number') {
+      const numMap: Record<number, string> = {
+        1: 'Bank Transfer',
+        2: 'PayPal',
+        3: 'Card'
+      };
+      return numMap[method] || String(method);
+    }
+
+    if (typeof method === 'object') {
+      const name = method?.name ?? method?.payment_method_name ?? method?.payment_method_name;
+      if (name) return String(name);
+    }
+
+    return String(method || '');
+  };
+  const { data: proofs, loading } = useAppSelector((s) => s.paymentProofs as any);
+
+  useEffect(() => {
+    dispatch(fetchMyProofs());
+  }, [dispatch]);
 
   // Filter payments based on search and filters
-  const filteredPayments = payments.filter(payment => {
-    const matchesSearch = payment.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         payment.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         payment.invoice.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesStatus = statusFilter === 'all' || payment.status === statusFilter;
-    
-    const paymentDate = new Date(payment.date);
+  // Transform proofs to table rows
+  const payments = (proofs || []).map((p: any) => ({
+    id: p.payment_id || p.id,
+    date: p.submitted_at || p.created_at || '',
+    description: `Top-up ${p.top_up_transaction_id || ''}`,
+    amount: Number(p.amount_paid_aud) || 0,
+    status: p.verification_status || 'pending',
+    // Prefer the readable name returned by the API, fall back to the raw payment_method value
+    method: p.payment_method_name ?? p.payment_method,
+    invoice: p.payment_id || '',
+    raw: p,
+  }));
+
+  const { isOpen, openModal, closeModal } = useModal();
+  const [selectedPayment, setSelectedPayment] = useState<any | null>(null);
+
+  const filteredPayments = payments.filter((payment: any) => {
+    const q = searchQuery.toLowerCase();
+    const matchesSearch =
+      (payment.description || '').toLowerCase().includes(q) ||
+      (payment.id || '').toLowerCase().includes(q) ||
+      (payment.invoice || '').toLowerCase().includes(q);
+
+    const matchesStatus = statusFilter === 'all' || (payment.status || '').toLowerCase() === statusFilter;
+
+    const paymentDate = payment.date ? new Date(payment.date) : null;
     const now = new Date();
     let matchesDate = true;
-    
-    if (dateFilter === 'last30') {
+
+    if (dateFilter === 'last30' && paymentDate) {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(now.getDate() - 30);
       matchesDate = paymentDate >= thirtyDaysAgo;
-    } else if (dateFilter === 'last90') {
+    } else if (dateFilter === 'last90' && paymentDate) {
       const ninetyDaysAgo = new Date();
       ninetyDaysAgo.setDate(now.getDate() - 90);
       matchesDate = paymentDate >= ninetyDaysAgo;
-    } else if (dateFilter === 'thisYear') {
+    } else if (dateFilter === 'thisYear' && paymentDate) {
       matchesDate = paymentDate.getFullYear() === now.getFullYear();
     }
-    
+
     return matchesSearch && matchesStatus && matchesDate;
   });
 
@@ -135,33 +98,44 @@ const PaymentHistoryPage = () => {
     return new Date(dateString).toLocaleDateString(undefined, options);
   };
 
-  // Status badge component
+  // Status badge component (align classes with other components)
   const StatusBadge = ({ status }: { status: string }) => {
-    const statusConfig = {
-      completed: { text: 'Completed', bgColor: 'bg-green-100', textColor: 'text-green-800' },
-      pending: { text: 'Pending', bgColor: 'bg-yellow-100', textColor: 'text-yellow-800' },
-      failed: { text: 'Failed', bgColor: 'bg-red-100', textColor: 'text-red-800' },
-      refunded: { text: 'Refunded', bgColor: 'bg-blue-100', textColor: 'text-blue-800' }
+    const statusKey = (status || '').toLowerCase();
+    const styles: Record<string, string> = {
+      completed: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900 dark:text-green-200 dark:border-green-700',
+      approved: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900 dark:text-green-200 dark:border-green-700',
+      verified: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900 dark:text-green-200 dark:border-green-700',
+      processing: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900 dark:text-blue-200 dark:border-blue-700',
+      pending: 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900 dark:text-yellow-200 dark:border-yellow-700',
+      rejected: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900 dark:text-red-200 dark:border-red-700',
+      failed: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900 dark:text-red-200 dark:border-red-700',
+      cancelled: 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600',
+      refunded: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900 dark:text-blue-200 dark:border-blue-700'
     };
-    
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.completed;
-    
+
+    const display = (statusKey || 'unknown').replace(/_/g, ' ');
+
     return (
-      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${config.bgColor} ${config.textColor}`}>
-        {config.text}
+      <span className={`px-3 py-1 rounded-full text-xs font-medium border ${styles[statusKey] || 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600'}`}>
+        {display.charAt(0).toUpperCase() + display.slice(1)}
       </span>
     );
   };
 
+  const openDetails = (payment: any) => {
+    setSelectedPayment(payment.raw ?? payment);
+    openModal();
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 dark:text-gray-100">
       <Head>
         <title>Payment History | Topify Omega</title>
         <meta name="description" content="View your payment history and download invoices" />
       </Head>
        {/* Summary Stats */}
         <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 dark:bg-gray-800 dark:border-gray-700">
             <div className="flex items-center">
               <div className="rounded-full bg-green-100 p-3">
                 <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -169,13 +143,13 @@ const PaymentHistoryPage = () => {
                 </svg>
               </div>
               <div className="ml-4">
-                <h3 className="text-sm font-medium text-gray-500">Total Payments</h3>
-                <p className="text-2xl font-semibold text-gray-900">{payments.length}</p>
+                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-300">Total Payments</h3>
+                <p className="text-2xl font-semibold text-gray-900 dark:text-white">{payments.length}</p>
               </div>
             </div>
           </div>
           
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 dark:bg-gray-800 dark:border-gray-700">
             <div className="flex items-center">
               <div className="rounded-full bg-blue-100 p-3">
                 <svg className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -183,15 +157,15 @@ const PaymentHistoryPage = () => {
                 </svg>
               </div>
               <div className="ml-4">
-                <h3 className="text-sm font-medium text-gray-500">Total Spent</h3>
-                <p className="text-2xl font-semibold text-gray-900">
-                  ${payments.reduce((sum, payment) => sum + payment.amount, 0).toFixed(2)}
+                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-300">Total Spent</h3>
+                <p className="text-2xl font-semibold text-gray-900 dark:text-white">
+                  ${payments.reduce((sum: number, payment: any) => sum + payment.amount, 0).toFixed(2)}
                 </p>
               </div>
             </div>
           </div>
           
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 dark:bg-gray-800 dark:border-gray-700">
             <div className="flex items-center">
               <div className="rounded-full bg-purple-100 p-3">
                 <svg className="h-6 w-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -199,8 +173,8 @@ const PaymentHistoryPage = () => {
                 </svg>
               </div>
               <div className="ml-4">
-                <h3 className="text-sm font-medium text-gray-500">Last Payment</h3>
-                <p className="text-2xl font-semibold text-gray-900">
+                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-300">Last Payment</h3>
+                <p className="text-2xl font-semibold text-gray-900 dark:text-white">
                   {formatDate(payments[0]?.date || 'N/A')}
                 </p>
               </div>
@@ -209,23 +183,23 @@ const PaymentHistoryPage = () => {
         </div>
 
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 py-6">
+      <div className="bg-white border-b border-gray-200 py-6 dark:bg-gray-800 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-6">
-          <h1 className="text-2xl font-bold text-gray-800">Payment History</h1>
-          <p className="text-gray-600 mt-1">View and manage your past payments</p>
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Payment History</h1>
+          <p className="text-gray-600 mt-1 dark:text-gray-300">View and manage your past payments</p>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Filters and Search */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6 dark:bg-gray-800 dark:border-gray-700">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="w-full md:w-1/3">
               <div className="relative">
                 <input
                   type="text"
                   placeholder="Search payments..."
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 placeholder-gray-400 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400 dark:border-gray-600"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -240,13 +214,18 @@ const PaymentHistoryPage = () => {
             <div className="flex flex-col sm:flex-row gap-3">
               <div>
                 <select
-                  className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-lg"
+                  className="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-lg bg-white text-gray-700 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600"
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
                 >
                   <option value="all">All Statuses</option>
                   <option value="completed">Completed</option>
                   <option value="pending">Pending</option>
+                  <option value="verified">Verified</option>
+                  <option value="approved">Approved</option>
+                  <option value="processing">Processing</option>
+                  <option value="rejected">Rejected</option>
+                  <option value="cancelled">Cancelled</option>
                   <option value="failed">Failed</option>
                   <option value="refunded">Refunded</option>
                 </select>
@@ -254,7 +233,7 @@ const PaymentHistoryPage = () => {
               
               <div>
                 <select
-                  className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-lg"
+                  className="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-lg bg-white text-gray-700 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600"
                   value={dateFilter}
                   onChange={(e) => setDateFilter(e.target.value)}
                 >
@@ -273,62 +252,77 @@ const PaymentHistoryPage = () => {
         </div>
 
         {/* Payment Table */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden dark:bg-gray-800 dark:border-gray-700">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Payment ID
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
+                 
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Transaction ID
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Description
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Amount
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Method
                   </th>
-                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Date
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredPayments.length > 0 ? (
-                  filteredPayments.map((payment) => (
-                    <tr key={payment.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+              <tbody className="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
+                {loading ? (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-12 text-center">
+                      <div className="text-sm text-gray-600 dark:text-gray-300">Loading payments…</div>
+                    </td>
+                  </tr>
+                ) : filteredPayments.length > 0 ? (
+                  filteredPayments.map((payment: any) => (
+                    <tr key={payment.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
                         {payment.id}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {formatDate(payment.date)}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">
+                     
+                      <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
                         {payment.description}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                         ${payment.amount.toFixed(2)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                     
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                        {formatMethod(payment.method)}
+                      </td>
+                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                        {payment.date ? formatDate(payment.date) : '—'}
+                      </td>
+                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         <StatusBadge status={payment.status} />
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {payment.method}
-                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button className="text-blue-600 hover:text-blue-900 mr-3">
-                          Receipt
-                        </button>
-                        <button className="text-blue-600 hover:text-blue-900">
-                          Invoice
+                        <button
+                          onClick={() => openDetails(payment)}
+                          className="inline-flex items-center justify-center h-8 w-8 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"
+                          aria-label="Open actions"
+                        >
+                          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="3" cy="10" r="1.5" fill="currentColor" />
+                            <circle cx="10" cy="10" r="1.5" fill="currentColor" />
+                            <circle cx="17" cy="10" r="1.5" fill="currentColor" />
+                          </svg>
                         </button>
                       </td>
                     </tr>
@@ -336,11 +330,11 @@ const PaymentHistoryPage = () => {
                 ) : (
                   <tr>
                     <td colSpan={7} className="px-6 py-12 text-center">
-                      <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
-                      <h3 className="mt-2 text-sm font-medium text-gray-900">No payments found</h3>
-                      <p className="mt-1 text-sm text-gray-500">
+                      <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">No payments found</h3>
+                      <p className="mt-1 text-sm text-gray-500 dark:text-gray-300">
                         Try adjusting your search or filter to find what you're looking for.
                       </p>
                     </td>
@@ -350,6 +344,97 @@ const PaymentHistoryPage = () => {
             </table>
           </div>
         </div>
+
+        {/* Repayment Details Modal */}
+        <Modal isOpen={isOpen} onClose={() => { setSelectedPayment(null); closeModal(); }} className="max-w-2xl m-4" >
+          <div className="p-6 shadow-3xl">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Repayment Details</h3>
+            {!selectedPayment ? (
+              <p className="text-sm text-gray-500 mt-3">No payment selected.</p>
+            ) : (
+              <div className="mt-4 grid grid-cols-1 gap-4">
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                  <div className="flex items-start justify-between">
+                      <div>
+                        <p className="text-sm text-gray-500">Payment ID</p>
+                        <p className="font-medium text-gray-900 dark:text-gray-100">{selectedPayment.payment_id ?? selectedPayment.paymentId}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm text-gray-500">Amount Paid</p>
+                        <p className="font-medium text-gray-900 dark:text-gray-100">{'$' + Number((selectedPayment.amount_paid_aud ?? selectedPayment.amount) ?? 0).toFixed(2)}</p>
+                      </div>
+                    </div>
+                </div>
+
+                <div className="bg-white dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                  <p className="text-sm text-gray-500">Reference</p>
+                  <p className="font-medium text-gray-900 dark:text-gray-100">{selectedPayment.reference_number ?? '—'}</p>
+                  <div className="mt-3 grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-sm text-gray-500">Payment Date</p>
+                      <p className="font-medium text-gray-900 dark:text-gray-100">{selectedPayment.payment_date ? formatDate(selectedPayment.payment_date) : '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Verification Status</p>
+                      <div className="mt-1">
+                        <StatusBadge status={String(selectedPayment.verification_status ?? selectedPayment.verificationStatus ?? 'unknown')} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {selectedPayment.top_up_request && (
+                  <div className="bg-white dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                    <p className="text-sm text-gray-500">Repayment Due Date</p>
+                    <p className="font-medium text-gray-900 dark:text-gray-100">{selectedPayment.top_up_request.repayment_due_date ? formatDate(selectedPayment.top_up_request.repayment_due_date) : '—'}</p>
+
+                    <div className="mt-3 grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-sm text-gray-500">Repayment Amount</p>
+                        <p className="font-medium text-gray-900 dark:text-gray-100">{'$' + Number(selectedPayment.top_up_request.repayment_amount_aud ?? 0).toFixed(2)}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">Repayment Status</p>
+                        <div className="mt-1">
+                          <StatusBadge status={String(selectedPayment.top_up_request.repayment_status ?? 'unknown')} />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {selectedPayment.receipt_path && (
+                  <div className="bg-white dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                    <p className="text-sm text-gray-500">Receipt</p>
+                    <a
+                      className="text-blue-600 hover:underline"
+                      href={
+                        selectedPayment.receipt_path.startsWith('http')
+                          ? selectedPayment.receipt_path
+                          : (() => {
+                              const raw = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'https://fintechapi.softsuitetech.com/api';
+                              // Remove a trailing /api if present so storage URL points to the public files host
+                              const storageBase = raw.replace(/\/api\/?$/, '').replace(/\/+$/, '');
+                              return `${storageBase}/storage/${selectedPayment.receipt_path}`;
+                            })()
+                      }
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      View receipt
+                    </a>
+                  </div>
+                )}
+
+                <div className="flex justify-end">
+                  <button onClick={() => { setSelectedPayment(null); closeModal(); }} className="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-md text-sm">
+                    Close
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </Modal>
 
        
       </div>

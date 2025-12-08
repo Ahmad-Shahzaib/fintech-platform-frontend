@@ -22,9 +22,14 @@ import currencyNetworkCreateReducer from './slice/currencyNetworkCreateSlice';
 import currencyNetworkUpdateReducer from './slice/currencyNetworkUpdateSlice';
 import updatePasswordReducer from './slice/updatePasswordSlice';
 import submitPaymentReducer from './slice/submitPaymentSlice';
+import paymentMethodsReducer from './slice/paymentMethodsSlice';
 import faqsReducer from './slice/faqsSlice';
 import adminStatsReducer from './slice/adminStatsSlice';
 import adminLatestTopUpsReducer from './slice/adminLatestTopUpsSlice';
+import bankDetailsReducer from './slice/bankDetailsSlice';
+import paypalDetailsReducer from './slice/paypalSlice';
+import paymentProofsReducer from './slice/paymentProofsSlice';
+import adminPaymentProofsReducer from './slice/adminPaymentProofsSlice';
 
 // New reducer
 
@@ -51,9 +56,14 @@ const rootReducer = combineReducers({
   currencyNetworkUpdate: currencyNetworkUpdateReducer,
   updatePassword: updatePasswordReducer,
   submitPayment: submitPaymentReducer,
+  paymentMethods: paymentMethodsReducer,
   faqs: faqsReducer,
   adminStats: adminStatsReducer,
   adminLatestTopUps: adminLatestTopUpsReducer,
+  bankDetails: bankDetailsReducer,
+  paypalDetails: paypalDetailsReducer,
+  paymentProofs: paymentProofsReducer,
+  adminPaymentProofs: adminPaymentProofsReducer,
   
 
 

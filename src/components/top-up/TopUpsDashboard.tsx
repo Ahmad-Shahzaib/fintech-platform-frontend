@@ -129,7 +129,7 @@ const TopUpsDashboard = () => {
             <table className="w-full">
               <thead className="bg-gray-100 dark:bg-gray-800 border-b border-gray-200 ">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Request ID</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Transaction ID</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Date</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Amount (AUD)</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Coin/Token</th>
@@ -209,7 +209,7 @@ const TopUpsDashboard = () => {
             <div className="p-4 space-y-3 text-sm">
               <div className="grid grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Request ID</label>
+                  <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Transaction ID</label>
                   <p className="text-base font-semibold text-gray-900 dark:text-gray-100">{selectedTopUp.id}</p>
                 </div>
 

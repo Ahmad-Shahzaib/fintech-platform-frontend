@@ -68,17 +68,23 @@ const navItems: NavItem[] = [
     ],
   },
   {
+    name: "Manage Repayments  ",
+    icon: <CalenderIcon />,
+    path : "/repayment-requests",
+
+  },
+  {
     name: "FAQs",
     icon: <PageIcon />,
     path : "/faq",
   },
   {
-    name: "Settings",
+    name: "Payment Methods",
     icon: <SettingsIcon />,
     subItems:
     [
-      { name: "Payment Method ", path: "/payment-method", pro: false },
-      { name: "Bank Details ", path: "/bank-details", pro: false },
+      { name: "Banks", path: "/bank-detail", pro: false },
+      { name: "PayPal Details", path: "/paypal-detail", pro: false },
     ]
   }
 
