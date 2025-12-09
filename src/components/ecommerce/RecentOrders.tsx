@@ -25,7 +25,6 @@ type Props = {
 const RecentOrders = ({ admin = false }: Props) => {
   const [selectedTopUp, setSelectedTopUp] = useState<TopUp | null>(null);
   const dispatch = useAppDispatch();
-  // page and status for server pagination
   const [page, setPage] = useState<number>(1);
   // Request all user top-ups by default (empty status) so they show after refresh
   const status = '';
