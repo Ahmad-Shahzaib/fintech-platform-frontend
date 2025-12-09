@@ -14,18 +14,21 @@ const RepaymenAdmin: React.FC = () => {
   }));
 
   const [page, setPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState<string>('');
   const [openDropdownId, setOpenDropdownId] = useState<number | null>(null);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [statusAction, setStatusAction] = useState<'approve' | 'reject' | null>(null);
   const [selectedProofId, setSelectedProofId] = useState<number | null>(null);
   const [adminNotes, setAdminNotes] = useState<string>('');
   const [rejectionReason, setRejectionReason] = useState<string>('');
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [detailItem, setDetailItem] = useState<any | null>(null);
 
   const { showAlert } = useAlert();
 
   useEffect(() => {
-    dispatch(fetchAdminProofs({ page }));
-  }, [dispatch, page]);
+    dispatch(fetchAdminProofs({ page, status: statusFilter }));
+  }, [dispatch, page, statusFilter]);
 
   const buildReceiptUrl = (path?: string | null) => {
     if (!path) return '';
@@ -76,11 +79,11 @@ const RepaymenAdmin: React.FC = () => {
       setSelectedProofId(null);
       setRejectionReason('');
       setAdminNotes('');
-      dispatch(fetchAdminProofs({ page }));
+      dispatch(fetchAdminProofs({ page, status: statusFilter }));
     } catch (err: any) {
       const msg = err || err?.message || 'Failed to reject proof';
       showAlert(msg, 'error');
-      dispatch(fetchAdminProofs({ page }));
+      dispatch(fetchAdminProofs({ page, status: statusFilter }));
     }
   };
 
@@ -96,7 +99,7 @@ const RepaymenAdmin: React.FC = () => {
         </div>
         <div>
           <button
-            onClick={() => dispatch(fetchAdminProofs({ page }))}
+            onClick={() => dispatch(fetchAdminProofs({ page, status: statusFilter }))}
             className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
           >
             Refresh
@@ -164,17 +167,27 @@ const RepaymenAdmin: React.FC = () => {
                       {openDropdownId === item.id && (
                         <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-20 py-1">
                           <button
+                            onClick={() => {
+                              setOpenDropdownId(null);
+                              setDetailItem(item);
+                              setShowDetailModal(true);
+                            }}
+                            className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-300 transition-colors flex items-center"
+                          >
+                            View Details
+                          </button>
+                          <button
                             onClick={async () => {
                               setOpenDropdownId(null);
                               try {
                                 const res = await dispatch(updateAdminPaymentStatus({ id: item.id, verification_status: 'verified', admin_notes: null })).unwrap();
                                 const msg = res?.message || 'Payment proof verified';
                                 showAlert(msg, 'success');
-                                dispatch(fetchAdminProofs({ page }));
+                                dispatch(fetchAdminProofs({ page, status: statusFilter }));
                               } catch (err: any) {
                                 const msg = err || err?.message || 'Failed to approve';
                                 showAlert(msg, 'error');
-                                dispatch(fetchAdminProofs({ page }));
+                                dispatch(fetchAdminProofs({ page, status: statusFilter }));
                               }
                             }}
                             className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-300 transition-colors flex items-center"
@@ -259,6 +272,52 @@ const RepaymenAdmin: React.FC = () => {
               <button onClick={() => setShowStatusModal(false)} className="px-3 py-1 bg-gray-200 text-gray-800 rounded text-sm">Cancel</button>
               <button onClick={confirmReject} className="px-3 py-1 bg-red-600 text-white rounded text-sm">Reject</button>
             </div>
+          </div>
+        </div>
+      )}
+      {showDetailModal && detailItem && (
+        <div className="fixed inset-0 flex items-center justify-center z-[100000] dark:bg-black/60">
+          <div className="absolute inset-0 bg-black opacity-40" onClick={() => setShowDetailModal(false)} />
+          <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl p-6 z-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium">Payment Proof Details</h3>
+              <button onClick={() => setShowDetailModal(false)} className="text-gray-500 hover:text-gray-700 dark:text-gray-300">Close</button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <div className="text-xs text-gray-500">Transaction ID</div>
+                <div className="font-medium">{detailItem.top_up_transaction_id || '-'}</div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-500">User</div>
+                <div className="font-medium">{detailItem.user?.name || '-'}<div className="text-xs text-gray-400">{detailItem.user?.email}</div></div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-500">Amount (AUD)</div>
+                <div className="font-medium">{detailItem.amount_paid_aud || '-'}</div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-500">Reference</div>
+                <div className="font-medium">{detailItem.reference_number || '-'}</div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-500">Receipt</div>
+                <div className="font-medium">{detailItem.receipt_path ? <a href={buildReceiptUrl(detailItem.receipt_path)} target="_blank" rel="noreferrer" className="text-blue-600">View receipt</a> : 'No receipt'}</div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-500">Status</div>
+                <div className="font-medium">{detailItem.verification_status || '-'}</div>
+              </div>
+              <div className="md:col-span-2">
+                <div className="text-xs text-gray-500">Admin Notes</div>
+                <div className="font-medium">{detailItem.admin_notes || '-'}</div>
+              </div>
+              <div className="md:col-span-2">
+                <div className="text-xs text-gray-500">Rejection Reason</div>
+                <div className="font-medium">{detailItem.rejection_reason || '-'}</div>
+              </div>
+            </div>
+           
           </div>
         </div>
       )}

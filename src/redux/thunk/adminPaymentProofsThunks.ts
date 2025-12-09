@@ -4,6 +4,7 @@ import axios from 'axios';
 
 export interface AdminPaymentProofsQuery {
   page?: number;
+  status?: string;
 }
 
 // Fetch all payment proofs for admin (GET /admin/all-proofs)
@@ -13,6 +14,7 @@ export const fetchAdminProofs = createAsyncThunk(
     try {
       const query = new URLSearchParams();
       if (params.page) query.set('page', String(params.page));
+      if (params.status) query.set('status', String(params.status));
 
       const response = await api.get(`/admin/all-proofs?${query.toString()}`);
       return response.data;

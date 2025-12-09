@@ -7,14 +7,14 @@ import { fetchMyProofs } from '@/redux/thunk/paymentProofsThunks';
 import { useModal } from '../../hooks/useModal';
 
 // Add this new modal component that matches the design from users.js
-const RepaymentDetailsModal = ({ 
-  isOpen, 
-  onClose, 
-  children 
-}: { 
-  isOpen: boolean; 
-  onClose: () => void; 
-  children: React.ReactNode 
+const RepaymentDetailsModal = ({
+  isOpen,
+  onClose,
+  children
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  children: React.ReactNode
 }) => {
   if (!isOpen) return null;
 
@@ -62,7 +62,9 @@ const PaymentHistoryPage = () => {
 
     return String(method || '');
   };
-  const { data: proofs, loading } = useAppSelector((s) => s.paymentProofs as any);
+  // Read slice fields explicitly to avoid destructuring issues
+  const proofs = useAppSelector((s) => (s.paymentProofs as any)?.data ?? []);
+  const loading = useAppSelector((s) => (s.paymentProofs as any)?.loading ?? false);
 
   useEffect(() => {
     dispatch(fetchMyProofs());
@@ -78,9 +80,17 @@ const PaymentHistoryPage = () => {
     status: p.verification_status || 'pending',
     // Prefer the readable name returned by the API, fall back to the raw payment_method value
     method: p.payment_method_name ?? p.payment_method,
+    // Add bank name (API may return top-level `bank_name` or nested `bank.bank_name`)
+    bankName: (p.bank?.bank_name || p.bank_name || p.bank?.account_name || '')?.toString().trim(),
     invoice: p.payment_id || '',
     raw: p,
   }));
+
+  // Debug: print first few mapped payments in dev so we can confirm bankName
+  if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
+    // eslint-disable-next-line no-console
+    console.debug('PaymentHistory - mapped payments sample:', payments.slice(0, 5));
+  }
 
   const { isOpen, openModal, closeModal } = useModal();
   const [selectedPayment, setSelectedPayment] = useState<any | null>(null);
@@ -154,54 +164,54 @@ const PaymentHistoryPage = () => {
         <title>Payment History | Topify Omega</title>
         <meta name="description" content="View your payment history and download invoices" />
       </Head>
-       {/* Summary Stats */}
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 dark:bg-gray-800 dark:border-gray-700">
-            <div className="flex items-center">
-              <div className="rounded-full bg-green-100 p-3">
-                <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div className="ml-4">
-                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-300">Total Payments</h3>
-                <p className="text-2xl font-semibold text-gray-900 dark:text-white">{payments.length}</p>
-              </div>
+      {/* Summary Stats */}
+      <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 dark:bg-gray-800 dark:border-gray-700">
+          <div className="flex items-center">
+            <div className="rounded-full bg-green-100 p-3">
+              <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
             </div>
-          </div>
-          
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 dark:bg-gray-800 dark:border-gray-700">
-            <div className="flex items-center">
-              <div className="rounded-full bg-blue-100 p-3">
-                <svg className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div className="ml-4">
-                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-300">Total Spent</h3>
-                <p className="text-2xl font-semibold text-gray-900 dark:text-white">
-                  ${payments.reduce((sum: number, payment: any) => sum + payment.amount, 0).toFixed(2)}
-                </p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 dark:bg-gray-800 dark:border-gray-700">
-            <div className="flex items-center">
-              <div className="rounded-full bg-purple-100 p-3">
-                <svg className="h-6 w-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
-              </div>
-              <div className="ml-4">
-                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-300">Last Payment</h3>
-                <p className="text-2xl font-semibold text-gray-900 dark:text-white">
-                  {formatDate(payments[0]?.date || 'N/A')}
-                </p>
-              </div>
+            <div className="ml-4">
+              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-300">Total Payments</h3>
+              <p className="text-2xl font-semibold text-gray-900 dark:text-white">{payments.length}</p>
             </div>
           </div>
         </div>
+
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 dark:bg-gray-800 dark:border-gray-700">
+          <div className="flex items-center">
+            <div className="rounded-full bg-blue-100 p-3">
+              <svg className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div className="ml-4">
+              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-300">Total Spent</h3>
+              <p className="text-2xl font-semibold text-gray-900 dark:text-white">
+                ${payments.reduce((sum: number, payment: any) => sum + payment.amount, 0).toFixed(2)}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 dark:bg-gray-800 dark:border-gray-700">
+          <div className="flex items-center">
+            <div className="rounded-full bg-purple-100 p-3">
+              <svg className="h-6 w-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+            </div>
+            <div className="ml-4">
+              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-300">Last Payment</h3>
+              <p className="text-2xl font-semibold text-gray-900 dark:text-white">
+                {formatDate(payments[0]?.date || 'N/A')}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Header */}
       <div className="bg-white border-b border-gray-200 py-6 dark:bg-gray-800 dark:border-gray-700">
@@ -231,7 +241,7 @@ const PaymentHistoryPage = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="flex flex-col sm:flex-row gap-3">
               <div>
                 <select
@@ -251,8 +261,8 @@ const PaymentHistoryPage = () => {
                   <option value="refunded">Refunded</option>
                 </select>
               </div>
-              
-             
+
+
             </div>
           </div>
         </div>
@@ -266,18 +276,21 @@ const PaymentHistoryPage = () => {
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Payment ID
                   </th>
-                 
+
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Transaction ID
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Amount
                   </th>
-                  
+
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Method
                   </th>
-                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Bank
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Date
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -291,7 +304,7 @@ const PaymentHistoryPage = () => {
               <tbody className="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
                 {loading ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-12 text-center">
+                    <td colSpan={8} className="px-6 py-12 text-center">
                       <div className="text-sm text-gray-600 dark:text-gray-300">Loading payments…</div>
                     </td>
                   </tr>
@@ -301,21 +314,24 @@ const PaymentHistoryPage = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
                         {payment.id}
                       </td>
-                     
+
                       <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
                         {payment.description}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                         ${payment.amount.toFixed(2)}
                       </td>
-                     
+
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
                         {formatMethod(payment.method)}
                       </td>
-                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                        {payment.bankName || '—'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
                         {payment.date ? formatDate(payment.date) : '—'}
                       </td>
-                       <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
                         <StatusBadge status={payment.status} />
                       </td>
                       <td className="pr-8 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -324,14 +340,14 @@ const PaymentHistoryPage = () => {
                           className="inline-flex items-center justify-center h-8 w-8 rounded-full   text-gray-600 dark:text-gray-300"
                           aria-label="Open actions"
                         >
-                         View Detail
+                          View Detail
                         </button>
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={7} className="px-6 py-12 text-center">
+                    <td colSpan={8} className="px-6 py-12 text-center">
                       <svg className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
@@ -348,21 +364,21 @@ const PaymentHistoryPage = () => {
         </div>
 
         {/* Repayment Details Modal - Using the new design */}
-        <RepaymentDetailsModal 
-          isOpen={isOpen} 
-          onClose={() => { 
-            setSelectedPayment(null); 
-            closeModal(); 
+        <RepaymentDetailsModal
+          isOpen={isOpen}
+          onClose={() => {
+            setSelectedPayment(null);
+            closeModal();
           }}
         >
           <div className="p-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">Repayment Details</h3>
-              <button 
-                onClick={() => { 
-                  setSelectedPayment(null); 
-                  closeModal(); 
-                }} 
+              <button
+                onClick={() => {
+                  setSelectedPayment(null);
+                  closeModal();
+                }}
                 className="text-gray-500 hover:text-gray-700 dark:text-gray-300"
               >
                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -370,28 +386,38 @@ const PaymentHistoryPage = () => {
                 </svg>
               </button>
             </div>
-            
+
             {!selectedPayment ? (
               <p className="text-sm text-gray-500 mt-3">No payment selected.</p>
             ) : (
               <div className="mt-4 grid grid-cols-1 gap-4">
                 <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
                   <div className="flex items-start justify-between">
-                      <div>
-                        <p className="text-sm text-gray-500">Payment ID</p>
-                        <p className="font-medium text-gray-900 dark:text-gray-100">{selectedPayment.payment_id ?? selectedPayment.paymentId}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm text-gray-500">Amount Paid</p>
-                        <p className="font-medium text-gray-900 dark:text-gray-100">{'$' + Number((selectedPayment.amount_paid_aud ?? selectedPayment.amount) ?? 0).toFixed(2)}</p>
-                      </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Payment ID</p>
+                      <p className="font-medium text-gray-900 dark:text-gray-100">{selectedPayment.payment_id ?? selectedPayment.paymentId}</p>
                     </div>
+                    <div className="text-right">
+                      <p className="text-sm text-gray-500">Amount Paid</p>
+                      <p className="font-medium text-gray-900 dark:text-gray-100">{'$' + Number((selectedPayment.amount_paid_aud ?? selectedPayment.amount) ?? 0).toFixed(2)}</p>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="bg-white dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                  <p className="text-sm text-gray-500">Reference</p>
-                  <p className="font-medium text-gray-900 dark:text-gray-100">{selectedPayment.reference_number ?? '—'}</p>
-                  <div className="mt-3 grid grid-cols-2 gap-3">
+                <div className="bg-white dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700 space-y-4">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-sm text-gray-500">Reference</p>
+                      <p className="font-medium text-gray-900 dark:text-gray-100">{selectedPayment.reference_number ?? '—'}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-gray-500">Bank</p>
+                      <p className="font-medium text-gray-900 dark:text-gray-100">{
+                        (selectedPayment?.bank?.bank_name || selectedPayment?.bank?.account_name || selectedPayment?.bank_name) ?? '—'
+                      }</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start justify-between">
                     <div>
                       <p className="text-sm text-gray-500">Payment Date</p>
                       <p className="font-medium text-gray-900 dark:text-gray-100">{selectedPayment.payment_date ? formatDate(selectedPayment.payment_date) : '—'}</p>
@@ -406,11 +432,11 @@ const PaymentHistoryPage = () => {
                 </div>
 
                 {selectedPayment.top_up_request && (
-                  <div className="bg-white dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                  <div className="bg-white dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700 space-y-2">
                     <p className="text-sm text-gray-500">Repayment Due Date</p>
                     <p className="font-medium text-gray-900 dark:text-gray-100">{selectedPayment.top_up_request.repayment_due_date ? formatDate(selectedPayment.top_up_request.repayment_due_date) : '—'}</p>
 
-                    <div className="mt-3 grid grid-cols-2 gap-3">
+                    <div className="flex items-start justify-between">
                       <div>
                         <p className="text-sm text-gray-500">Repayment Amount</p>
                         <p className="font-medium text-gray-900 dark:text-gray-100">{'$' + Number(selectedPayment.top_up_request.repayment_amount_aud ?? 0).toFixed(2)}</p>
@@ -434,11 +460,11 @@ const PaymentHistoryPage = () => {
                         selectedPayment.receipt_path.startsWith('http')
                           ? selectedPayment.receipt_path
                           : (() => {
-                              const raw = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'https://fintechapi.softsuitetech.com/api';
-                              // Remove a trailing /api if present so storage URL points to the public files host
-                              const storageBase = raw.replace(/\/api\/?$/, '').replace(/\/+$/, '');
-                              return `${storageBase}/storage/${selectedPayment.receipt_path}`;
-                            })()
+                            const raw = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'https://fintechapi.softsuitetech.com/api';
+                            // Remove a trailing /api if present so storage URL points to the public files host
+                            const storageBase = raw.replace(/\/api\/?$/, '').replace(/\/+$/, '');
+                            return `${storageBase}/storage/${selectedPayment.receipt_path}`;
+                          })()
                       }
                       target="_blank"
                       rel="noreferrer"
@@ -448,7 +474,7 @@ const PaymentHistoryPage = () => {
                   </div>
                 )}
 
-               
+
               </div>
             )}
           </div>
