@@ -7,7 +7,7 @@ export interface AdminPaymentProofsQuery {
   status?: string;
 }
 
-// Fetch all payment proofs for admin (GET /admin/all-proofs)
+
 export const fetchAdminProofs = createAsyncThunk(
   'adminPaymentProofs/fetchAll',
   async (params: AdminPaymentProofsQuery = { page: 1 }, { rejectWithValue }) => {
