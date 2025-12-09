@@ -5,7 +5,28 @@ import Head from 'next/head';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { fetchMyProofs } from '@/redux/thunk/paymentProofsThunks';
 import { useModal } from '../../hooks/useModal';
-import { Modal } from '../ui/modal';
+
+// Add this new modal component that matches the design from users.js
+const RepaymentDetailsModal = ({ 
+  isOpen, 
+  onClose, 
+  children 
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  children: React.ReactNode 
+}) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 flex items-center justify-center bg-black/60 z-[100000]">
+      <div className="absolute inset-0 bg-black opacity-40" onClick={onClose} />
+      <div className="relative bg-white rounded-lg shadow-2xl w-full max-w-2xl p-6 dark:bg-gray-800">
+        {children}
+      </div>
+    </div>
+  );
+};
 
 const PaymentHistoryPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -231,22 +252,7 @@ const PaymentHistoryPage = () => {
                 </select>
               </div>
               
-              <div>
-                <select
-                  className="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-lg bg-white text-gray-700 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600"
-                  value={dateFilter}
-                  onChange={(e) => setDateFilter(e.target.value)}
-                >
-                  <option value="all">All Dates</option>
-                  <option value="last30">Last 30 Days</option>
-                  <option value="last90">Last 90 Days</option>
-                  <option value="thisYear">This Year</option>
-                </select>
-              </div>
-              
-              <button className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors">
-                Export
-              </button>
+             
             </div>
           </div>
         </div>
@@ -277,7 +283,7 @@ const PaymentHistoryPage = () => {
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Status
                   </th>
-                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th scope="col" className="px-6 py-4 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -312,17 +318,13 @@ const PaymentHistoryPage = () => {
                        <td className="px-6 py-4 whitespace-nowrap text-sm">
                         <StatusBadge status={payment.status} />
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <td className="pr-8 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <button
                           onClick={() => openDetails(payment)}
-                          className="inline-flex items-center justify-center h-8 w-8 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"
+                          className="inline-flex items-center justify-center h-8 w-8 rounded-full   text-gray-600 dark:text-gray-300"
                           aria-label="Open actions"
                         >
-                          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <circle cx="3" cy="10" r="1.5" fill="currentColor" />
-                            <circle cx="10" cy="10" r="1.5" fill="currentColor" />
-                            <circle cx="17" cy="10" r="1.5" fill="currentColor" />
-                          </svg>
+                         View Detail
                         </button>
                       </td>
                     </tr>
@@ -345,10 +347,30 @@ const PaymentHistoryPage = () => {
           </div>
         </div>
 
-        {/* Repayment Details Modal */}
-        <Modal isOpen={isOpen} onClose={() => { setSelectedPayment(null); closeModal(); }} className="max-w-2xl m-4" >
-          <div className="p-6 shadow-3xl">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Repayment Details</h3>
+        {/* Repayment Details Modal - Using the new design */}
+        <RepaymentDetailsModal 
+          isOpen={isOpen} 
+          onClose={() => { 
+            setSelectedPayment(null); 
+            closeModal(); 
+          }}
+        >
+          <div className="p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Repayment Details</h3>
+              <button 
+                onClick={() => { 
+                  setSelectedPayment(null); 
+                  closeModal(); 
+                }} 
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-300"
+              >
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
             {!selectedPayment ? (
               <p className="text-sm text-gray-500 mt-3">No payment selected.</p>
             ) : (
@@ -426,17 +448,11 @@ const PaymentHistoryPage = () => {
                   </div>
                 )}
 
-                <div className="flex justify-end">
-                  <button onClick={() => { setSelectedPayment(null); closeModal(); }} className="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-md text-sm">
-                    Close
-                  </button>
-                </div>
+               
               </div>
             )}
           </div>
-        </Modal>
-
-       
+        </RepaymentDetailsModal>
       </div>
     </div>
   );

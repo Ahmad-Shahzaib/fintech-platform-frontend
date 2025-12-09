@@ -27,7 +27,8 @@ const RecentOrders = ({ admin = false }: Props) => {
   const dispatch = useAppDispatch();
   // page and status for server pagination
   const [page, setPage] = useState<number>(1);
-  const status = 'pending';
+  // Request all user top-ups by default (empty status) so they show after refresh
+  const status = '';
 
   // Read top-ups from redux store (server)
   const topUpsItems = useAppSelector((s) => (admin ? s.adminLatestTopUps?.items ?? [] : s.topUps?.items ?? []));
