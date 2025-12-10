@@ -42,7 +42,7 @@ const KYCStatus = () => {
     }
 
     return (
-        <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
+        <div className="flex items-center justify-center  dark:bg-gray-900 p-4">
             <div className="w-full max-w-3xl bg-white dark:bg-gray-800 rounded-3xl shadow-sm overflow-hidden">
                 <div className="p-8">
                     <div className="text-center text-gray-900 dark:text-gray-100">

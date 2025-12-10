@@ -83,21 +83,21 @@ const SupportPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="">
       <Head>
         <title>Help & Support | Topify Omega</title>
         <meta name="description" content="Submit a support request to resolve your issue" />
       </Head>
 
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-12">
+      {/* <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-12">
         <div className="max-w-4xl mx-auto px-6 text-center">
           <h1 className="text-3xl font-bold mb-4">Help & Support</h1>
           <p className="text-lg max-w-2xl mx-auto">
             Having trouble? Submit your issue and our support team will help you resolve it
           </p>
         </div>
-      </div>
+      </div> */}
 
       <div className="max-w-6xl mx-auto px-6 py-12">
         {/* Success Message */}

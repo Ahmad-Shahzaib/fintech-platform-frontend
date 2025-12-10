@@ -63,8 +63,8 @@ export default function UpdatePasswordUI() {
   };
 
   return (
-    <div className="flex items-center justify-center py-7 border rounded-2xl mt-2">
-      <div className="w-full">
+    <div className="flex  py-7 mt-2">
+      <div className="w-full max-w-md">
         {/* Toast */}
         {showToast && (
           <div
@@ -81,8 +81,8 @@ export default function UpdatePasswordUI() {
             </div>
           </div>
         )}
-        <div className=" dark:bg-gray-900  dark:shadow-none p-8">
-          <h2 className="text-3xl font-bold text-center text-gray-900 dark:text-gray-100 mb-6">Update Password</h2>
+        <div className="bg-white dark:bg-gray-900 shadow-sm dark:shadow-none border dark:border-gray-700 rounded-2xl p-6">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Update Password</h2>
 
           <form className="space-y-4" onSubmit={onSubmit}>
             {/* Current Password */}
@@ -92,7 +92,7 @@ export default function UpdatePasswordUI() {
                 placeholder="Current password"
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
-                className="w-full px-4 py-3 pr-12 text-lg border border-gray-300 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition placeholder-gray-400 dark:placeholder-gray-500"
+                className="w-full px-3 py-2 pr-10 text-base border border-gray-300 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition placeholder-gray-400 dark:placeholder-gray-500"
               />
               <button type="button" onClick={() => setShowCurrent(v => !v)} className="absolute inset-y-0 right-0 pr-3 flex items-center">
                 {showCurrent ? <EyeOff className="h-5 w-5 text-gray-500" /> : <Eye className="h-5 w-5 text-gray-500" />}
@@ -109,7 +109,7 @@ export default function UpdatePasswordUI() {
                 placeholder="New password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full px-4 py-3 pr-12 text-lg border border-gray-300 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition placeholder-gray-400 dark:placeholder-gray-500"
+                className="w-full px-3 py-2 pr-10 text-base border border-gray-300 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition placeholder-gray-400 dark:placeholder-gray-500"
               />
               <button type="button" onClick={() => setShowNew(v => !v)} className="absolute inset-y-0 right-0 pr-3 flex items-center">
                 {showNew ? <EyeOff className="h-5 w-5 text-gray-500" /> : <Eye className="h-5 w-5 text-gray-500" />}
@@ -126,7 +126,7 @@ export default function UpdatePasswordUI() {
                 placeholder="Confirm new password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full px-4 py-3 pr-12 text-lg border border-gray-300 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition placeholder-gray-400 dark:placeholder-gray-500"
+                className="w-full px-3 py-2 pr-10 text-base border border-gray-300 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition placeholder-gray-400 dark:placeholder-gray-500"
               />
               <button type="button" onClick={() => setShowConfirm(v => !v)} className="absolute inset-y-0 right-0 pr-3 flex items-center">
                 {showConfirm ? <EyeOff className="h-5 w-5 text-gray-500" /> : <Eye className="h-5 w-5 text-gray-500" />}
@@ -147,7 +147,7 @@ export default function UpdatePasswordUI() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 dark:bg-blue-600 disabled:opacity-60 hover:bg-blue-700 dark:hover:bg-blue-700 text-white font-semibold text-lg py-3 rounded-xl transition duration-200"
+              className="w-full bg-blue-600 dark:bg-blue-600 disabled:opacity-60 hover:bg-blue-700 dark:hover:bg-blue-700 text-white font-semibold text-base py-2 rounded-xl transition duration-200"
             >
               {loading ? 'Updating...' : 'Update Password'}
             </button>

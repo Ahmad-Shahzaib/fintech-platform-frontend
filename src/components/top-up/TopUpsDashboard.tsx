@@ -120,7 +120,7 @@ const TopUpsDashboard = () => {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">My Top-Ups</h1>
+          <h1 className="text-2xl  font-bold text-gray-900 dark:text-gray-100">My Top-Ups</h1>
           <p className="text-gray-600 dark:text-gray-300 mt-1">View and manage your cryptocurrency top-up requests</p>
         </div>
 
@@ -192,12 +192,18 @@ const TopUpsDashboard = () => {
       {/* Slide-over panel */}
       {selectedTopUp && (
         // Ensure the slide-over sits above the header which uses a high z-index
-        <div className="fixed inset-0 z-[100000] flex">
+        <div className="fixed inset-0 bg-black/60 z-[100000] flex">
           {/* backdrop */}
-          <div className="fixed inset-0 " onClick={() => setSelectedTopUp(null)} />
+          <div className="fixed inset-0 z-10" onClick={() => setSelectedTopUp(null)} />
 
           {/* slide over */}
-          <section role="dialog" aria-modal="true" className="ml-auto w-full max-w-sm bg-white dark:bg-gray-800 h-full shadow-xl overflow-y-auto" aria-label="Top Up details panel">
+          <section
+            role="dialog"
+            aria-modal="true"
+            className="ml-auto w-full max-w-sm bg-white dark:bg-gray-800 h-full shadow-xl overflow-y-auto z-20"
+            aria-label="Top Up details panel"
+            onClick={(e) => e.stopPropagation()} // prevent clicks inside the panel from closing it
+          >
             <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Top-Up Details</h2>

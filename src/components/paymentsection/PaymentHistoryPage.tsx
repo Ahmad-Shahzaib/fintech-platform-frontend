@@ -94,6 +94,9 @@ const PaymentHistoryPage = () => {
 
   const { isOpen, openModal, closeModal } = useModal();
   const [selectedPayment, setSelectedPayment] = useState<any | null>(null);
+  // Pagination: show 10 records per page
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
 
   const filteredPayments = payments.filter((payment: any) => {
     const q = searchQuery.toLowerCase();
@@ -122,6 +125,19 @@ const PaymentHistoryPage = () => {
 
     return matchesSearch && matchesStatus && matchesDate;
   });
+
+  // Reset to first page when filters/search/payments change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter, dateFilter, payments.length]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredPayments.length / pageSize));
+  // Ensure current page is within bounds when filtered list changes
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [currentPage, totalPages]);
+
+  const paginatedPayments = filteredPayments.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   // Format date for display
   const formatDate = (dateString: string) => {
@@ -309,7 +325,7 @@ const PaymentHistoryPage = () => {
                     </td>
                   </tr>
                 ) : filteredPayments.length > 0 ? (
-                  filteredPayments.map((payment: any) => (
+                  paginatedPayments.map((payment: any) => (
                     <tr key={payment.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
                         {payment.id}
@@ -360,6 +376,47 @@ const PaymentHistoryPage = () => {
                 )}
               </tbody>
             </table>
+          </div>
+        </div>
+
+        {/* Pagination Controls */}
+        <div className="flex items-center justify-between px-6 py-3 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+          <div className="text-sm text-gray-700 dark:text-gray-300">
+            Showing {filteredPayments.length === 0 ? 0 : (currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, filteredPayments.length)} of {filteredPayments.length}
+          </div>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className={`px-3 py-1 rounded-md border ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+            >
+              Prev
+            </button>
+
+            <div className="hidden sm:flex items-center space-x-1">
+              {Array.from({ length: totalPages }).map((_, idx) => {
+                const page = idx + 1;
+                const active = page === currentPage;
+                return (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`px-3 py-1 rounded-md border ${active ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600'}`}
+                    aria-current={active ? 'page' : undefined}
+                  >
+                    {page}
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className={`px-3 py-1 rounded-md border ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+            >
+              Next
+            </button>
           </div>
         </div>
 

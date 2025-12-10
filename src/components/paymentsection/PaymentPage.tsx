@@ -197,6 +197,15 @@ export default function PaymentConfirmationPage() {
   // derive list of completed top-ups from redux state
   const completedTopUps = (topUpsState?.items || []).filter((t: any) => String(t?.status || '').toLowerCase() === 'completed');
 
+  // If there are top-ups but none are completed, clear any entered topupId
+  useEffect(() => {
+    if (topUpsState?.items && topUpsState.items.length > 0 && completedTopUps.length === 0) {
+      setTopupId('');
+    }
+    // intentionally only depend on items and completed count
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [topUpsState?.items, completedTopUps.length]);
+
   return (
     <div className="min-h-screen dark:bg-gray-900 flex items-center justify-center p-4">
       <div className="w-full max-w-6xl bg-white dark:bg-gray-800 rounded-3xl shadow-sm overflow-hidden">
@@ -207,53 +216,44 @@ export default function PaymentConfirmationPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6" noValidate>
-            <div className="bg-gradient-to-br from-white/50 dark:from-gray-800/60 rounded-2xl p-6 border border-gray-100 dark:border-gray-700">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Bank Transfer Payment</h2>
-            </div>
+
 
             <div className="p-0 space-y-6">
               {/* Top-up Request ID */}
               <div>
                 <label className="block text-sm font-semibold text-gray-900 mb-3 dark:text-white">
-                 My Active Top-ups<span className="text-red-500">*</span>
+                  My Active Top-ups<span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
-                  {completedTopUps && completedTopUps.length > 0 ? (
-                    <select
-                      value={topupId}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setTopupId(val);
-                        const sel = completedTopUps.find((it: any) => String(it.id) === val || String(it.transaction_id ?? '') === val);
-                        if (sel) {
-                          const amt = sel.amount_aud ?? sel.total_aud ?? sel.amount ?? '';
-                          const n = parseFloat(String(amt));
-                          setAmountPaid(!isNaN(n) ? String(n.toFixed(2)) : String(amt));
-                        }
-                      }}
-                      className="w-full px-4 py-3.5 bg-gray-50 dark:bg-gray-700 border-0 rounded-xl text-gray-900 dark:text-gray-100 text-sm placeholder-gray-400 focus:ring-2 focus:ring-blue-500 transition-all"
-                    >
-                      <option value="">Select completed top-up</option>
-                      {completedTopUps.map((item: any) => {
-                        const txn = item.transaction_id ?? item.id;
-                        const amt = item.amount_aud ?? item.total_aud ?? item.amount ?? '';
+                  {/* Always show a dropdown for active top-ups. If there are no completed top-ups (or none yet), show a disabled select with a helpful message. */}
+                  <select
+                    value={topupId}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setTopupId(val);
+                      const sel = completedTopUps.find((it: any) => String(it.id) === val || String(it.transaction_id ?? '') === val);
+                      if (sel) {
+                        const amt = sel.amount_aud ?? sel.total_aud ?? sel.amount ?? '';
                         const n = parseFloat(String(amt));
-                        const amtFormatted = !isNaN(n) ? n.toFixed(2) : String(amt);
-                        return (
-                          <option key={String(item.id)} value={String(item.id)}>
-                            {`${String(txn)} ($${amtFormatted})`}
-                          </option>
-                        );
-                      })}
-                    </select>
-                  ) : (
-                    <input
-                      type="text"
-                      value={topupId}
-                      onChange={(e) => setTopupId(e.target.value)}
-                      className="w-full px-4 py-3.5 bg-gray-50 dark:bg-gray-700 border-0 rounded-xl text-gray-900 dark:text-gray-100 text-sm placeholder-gray-400 focus:ring-2 focus:ring-blue-500 transition-all"
-                    />
-                  )}
+                        setAmountPaid(!isNaN(n) ? String(n.toFixed(2)) : String(amt));
+                      }
+                    }}
+                    className="w-full px-4 py-3.5 bg-gray-50 dark:bg-gray-700 border-0 rounded-xl text-gray-900 dark:text-gray-100 text-sm placeholder-gray-400 focus:ring-2 focus:ring-blue-500 transition-all"
+                    disabled={!completedTopUps || completedTopUps.length === 0}
+                  >
+                    <option value="">{(completedTopUps && completedTopUps.length > 0) ? 'Select completed top-up' : "You don't have any active Top Up"}</option>
+                    {completedTopUps && completedTopUps.length > 0 && completedTopUps.map((item: any) => {
+                      const txn = item.transaction_id ?? item.id;
+                      const amt = item.amount_aud ?? item.total_aud ?? item.amount ?? '';
+                      const n = parseFloat(String(amt));
+                      const amtFormatted = !isNaN(n) ? n.toFixed(2) : String(amt);
+                      return (
+                        <option key={String(item.id)} value={String(item.id)}>
+                          {`${String(txn)} ($${amtFormatted})`}
+                        </option>
+                      );
+                    })}
+                  </select>
                 </div>
               </div>
 
@@ -328,10 +328,108 @@ export default function PaymentConfirmationPage() {
                               return (
                                 <div className="mt-3 p-3 border rounded-lg bg-yellow-100 dark:bg-gray-900">
                                   <div className="text-sm font-semibold text-gray-900 dark:text-white">{bank.bank_name || 'Bank'}</div>
-                                  <div className="text-xs text-gray-600 dark:text-gray-300">Account Title: {bank.account_title || '-'}</div>
-                                  <div className="text-xs text-gray-600 dark:text-gray-300">Account Number: {bank.account_number || '-'}</div>
-                                  {bank.iban && <div className="text-xs text-gray-600 dark:text-gray-300">IBAN: {bank.iban}</div>}
-                                  {bank.swift_code && <div className="text-xs text-gray-600 dark:text-gray-300">SWIFT: {bank.swift_code}</div>}
+
+                                  <div className="mt-2 text-xs text-gray-600 dark:text-gray-300">
+                                    <div className="flex items-center w-full min-w-0">
+                                      <span className="font-semibold text-gray-900 dark:text-white">Account Title:</span>
+                                      <span title={String(bank.account_title || '-')} className="ml-2 font-normal text-gray-700 dark:text-gray-200 overflow-hidden whitespace-nowrap truncate">{(bank.account_title || '-').toString().trim() || '-'}</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const text = (bank.account_title || '').toString().trim();
+                                          if (!text) { showAlert('No account title to copy', 'error'); return; }
+                                          if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+                                            navigator.clipboard.writeText(text).then(() => showAlert('Account title copied', 'success')).catch(() => showAlert('Failed to copy', 'error'));
+                                          } else {
+                                            try { const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); showAlert('Account title copied', 'success'); } catch { showAlert('Failed to copy', 'error'); }
+                                          }
+                                        }}
+                                        className="ml-2 inline-flex items-center justify-center p-1 rounded-md text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+                                        aria-label="Copy account title"
+                                      >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2" />
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 8v8a2 2 0 01-2 2H8" />
+                                        </svg>
+                                      </button>
+                                    </div>
+
+                                    <div className="mt-2 flex items-center w-full min-w-0">
+                                      <span className="font-semibold text-gray-900 dark:text-white">Account Number:</span>
+                                      <span title={String(bank.account_number || '-')} className="ml-2 font-normal text-gray-700 dark:text-gray-200 overflow-hidden whitespace-nowrap truncate">{(bank.account_number || '-').toString().trim() || '-'}</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const text = (bank.account_number || '').toString().trim();
+                                          if (!text) { showAlert('No account number to copy', 'error'); return; }
+                                          if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+                                            navigator.clipboard.writeText(text).then(() => showAlert('Account number copied', 'success')).catch(() => showAlert('Failed to copy', 'error'));
+                                          } else {
+                                            try { const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); showAlert('Account number copied', 'success'); } catch { showAlert('Failed to copy', 'error'); }
+                                          }
+                                        }}
+                                        className="ml-2 inline-flex items-center justify-center p-1 rounded-md text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+                                        aria-label="Copy account number"
+                                      >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2" />
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 8v8a2 2 0 01-2 2H8" />
+                                        </svg>
+                                      </button>
+                                    </div>
+
+                                    {bank.iban && (
+                                      <div className="mt-2 flex items-center w-full min-w-0">
+                                        <span className="font-semibold text-gray-900 dark:text-white">IBAN:</span>
+                                        <span title={String(bank.iban || '-')} className="ml-2 font-normal text-gray-700 dark:text-gray-200 overflow-hidden whitespace-nowrap truncate">{(bank.iban || '-').toString().trim() || '-'}</span>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            const text = (bank.iban || '').toString().trim();
+                                            if (!text) { showAlert('No IBAN to copy', 'error'); return; }
+                                            if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+                                              navigator.clipboard.writeText(text).then(() => showAlert('IBAN copied', 'success')).catch(() => showAlert('Failed to copy', 'error'));
+                                            } else {
+                                              try { const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); showAlert('IBAN copied', 'success'); } catch { showAlert('Failed to copy', 'error'); }
+                                            }
+                                          }}
+                                          className="ml-2 inline-flex items-center justify-center p-1 rounded-md text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+                                          aria-label="Copy IBAN"
+                                        >
+                                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 8v8a2 2 0 01-2 2H8" />
+                                          </svg>
+                                        </button>
+                                      </div>
+                                    )}
+
+                                    {bank.swift_code && (
+                                      <div className="mt-2 flex items-center w-full min-w-0">
+                                        <span className="font-semibold text-gray-900 dark:text-white">SWIFT:</span>
+                                        <span title={String(bank.swift_code || '-')} className="ml-2 font-normal text-gray-700 dark:text-gray-200 overflow-hidden whitespace-nowrap truncate">{(bank.swift_code || '-').toString().trim() || '-'}</span>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            const text = (bank.swift_code || '').toString().trim();
+                                            if (!text) { showAlert('No SWIFT to copy', 'error'); return; }
+                                            if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+                                              navigator.clipboard.writeText(text).then(() => showAlert('SWIFT copied', 'success')).catch(() => showAlert('Failed to copy', 'error'));
+                                            } else {
+                                              try { const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); showAlert('SWIFT copied', 'success'); } catch { showAlert('Failed to copy', 'error'); }
+                                            }
+                                          }}
+                                          className="ml-2 inline-flex items-center justify-center p-1 rounded-md text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+                                          aria-label="Copy SWIFT"
+                                        >
+                                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 8v8a2 2 0 01-2 2H8" />
+                                          </svg>
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               );
                             })()
@@ -343,7 +441,7 @@ export default function PaymentConfirmationPage() {
                           onChange={(e) => setBankType(e.target.value)}
                           className="w-full px-4 py-3.5 bg-gray-50 dark:bg-gray-700 border-0 rounded-xl text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 transition-all"
                         >
-                           
+
                         </select>
                       )}
                     </div>
@@ -362,12 +460,62 @@ export default function PaymentConfirmationPage() {
                       <div className="relative">
                         {paypalDetailsState?.items && paypalDetailsState.items.length > 0 ? (
                           <>
-                            
+
                             {/* small card preview for selected paypal */}
                             {paypalDetailsState.items[selectedPaypalIndex] && (
-                              <div className="mt-3 p-3 border rounded-lg bg-yellow-100 dark:bg-gray-900">
-                                <div className="text-sm font-semibold text-gray-900 dark:text-white">Name:  {paypalDetailsState.items[selectedPaypalIndex].account_name || 'PayPal'}</div>
-                                <div className="text-sm font-semibold text-gray-900 dark:text-white">Email: {paypalDetailsState.items[selectedPaypalIndex].paypal_email || '-'}</div>
+                              <div className="mt-3 p-3 border rounded-lg bg-yellow-100 dark:bg-gray-900 w-full">
+                                <div className="flex items-center justify-between w-full">
+                                  <div className="flex-1 text-sm">
+                                    <span className="font-semibold text-gray-900 dark:text-white">Name:</span>
+                                    <span className="ml-2 font-normal text-gray-700 dark:text-gray-200">{paypalDetailsState.items[selectedPaypalIndex].account_name || 'PayPal'}</span>
+                                  </div>
+                                </div>
+
+                                <div className="mt-2 flex items-center w-full">
+                                  <div className="flex-1 text-sm flex items-center min-w-0">
+                                    <span className="font-semibold text-gray-900 dark:text-white">Email:</span>
+                                    <span title={(paypalDetailsState.items[selectedPaypalIndex].paypal_email || '').trim() || '-'} className="ml-2 font-normal text-gray-700 dark:text-gray-200 overflow-hidden whitespace-nowrap truncate">{(paypalDetailsState.items[selectedPaypalIndex].paypal_email || '').trim() || '-'}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const email = (paypalDetailsState.items[selectedPaypalIndex].paypal_email || '').trim();
+                                        if (!email) {
+                                          showAlert('No email to copy', 'error');
+                                          return;
+                                        }
+                                        if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+                                          navigator.clipboard.writeText(email).then(() => {
+                                            showAlert('Email copied to clipboard', 'success');
+                                          }).catch(() => {
+                                            showAlert('Failed to copy email', 'error');
+                                          });
+                                        } else {
+                                          // fallback for older browsers
+                                          try {
+                                            const ta = document.createElement('textarea');
+                                            ta.value = email;
+                                            ta.style.position = 'fixed';
+                                            ta.style.left = '-9999px';
+                                            document.body.appendChild(ta);
+                                            ta.select();
+                                            document.execCommand('copy');
+                                            document.body.removeChild(ta);
+                                            showAlert('Email copied to clipboard', 'success');
+                                          } catch (err) {
+                                            showAlert('Failed to copy email', 'error');
+                                          }
+                                        }
+                                      }}
+                                      aria-label="Copy email"
+                                      className="ml-2 inline-flex items-center justify-center p-1 rounded-md text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+                                    >
+                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 8v8a2 2 0 01-2 2H8" />
+                                      </svg>
+                                    </button>
+                                  </div>
+                                </div>
                               </div>
                             )}
                           </>
