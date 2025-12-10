@@ -26,6 +26,8 @@ export default function PaymentConfirmationPage() {
   const [selectedBankId, setSelectedBankId] = useState<string>('');
   const [selectedPaypalIndex, setSelectedPaypalIndex] = useState<number>(0);
   const fileRef = useRef<HTMLInputElement | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string>('');
 
   // Global alert from provider (replaces inline messages below)
   const { showAlert } = useAlert();
@@ -48,26 +50,21 @@ export default function PaymentConfirmationPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Basic client-side validation
-    if (!topupId || String(topupId).trim() === '') {
-      // eslint-disable-next-line no-alert
-      alert('Top-up request ID is required');
-      return;
-    }
-
-    if (!amountPaid || String(amountPaid).trim() === '') {
-      // eslint-disable-next-line no-alert
-      alert('Payment amount is required');
-      return;
-    }
+    // Aggregate client-side validation for required fields
+    const missing: string[] = [];
+    if (!topupId || String(topupId).trim() === '') missing.push('Top-up request ID');
+    if (!amountPaid || String(amountPaid).trim() === '') missing.push('Payment amount');
+    if (!paymentMethod || String(paymentMethod).trim() === '') missing.push('Payment method');
+    if (!referenceNumber || String(referenceNumber).trim() === '') missing.push('Reference number');
+    if (!selectedFile) missing.push('Receipt / proof of payment');
 
     const selectedMethodObj = paymentMethodsState?.methods?.find((m: any) => String(m.id) === String(paymentMethod));
     const methodName = String(selectedMethodObj?.name || '').toLowerCase();
+    if (methodName.includes('bank') && !selectedBankId) missing.push('Bank selection');
 
-    if (methodName.includes('bank') && !selectedBankId) {
-      // eslint-disable-next-line no-alert
-      alert('Please select a bank for bank transfer payments');
+    if (missing.length > 0) {
+      // Show aggregated missing fields in global alert
+      showAlert(`${missing.join(', ')} ${missing.length === 1 ? 'is' : 'are'} required.`, 'error');
       return;
     }
 
@@ -83,9 +80,8 @@ export default function PaymentConfirmationPage() {
     formData.append('reference_number', referenceNumber);
     formData.append('payment_notes', paymentNotes);
 
-    const file = fileRef.current?.files?.[0];
-    if (file) {
-      formData.append('receipt_file', file);
+    if (selectedFile) {
+      formData.append('receipt_file', selectedFile);
     }
 
     // if a bank was selected, include bank_id in the payload
@@ -106,11 +102,34 @@ export default function PaymentConfirmationPage() {
       setPaymentNotes('');
       setBankType('');
       setSelectedBankId('');
+      setSelectedFile(null);
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+        setPreviewUrl('');
+      }
       if (fileRef.current) fileRef.current.value = '';
     } catch (err) {
       // error handled in slice
     }
   };
+
+  // handle file input changes and create preview URL
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0] ?? null;
+    if (f) {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      const url = URL.createObjectURL(f);
+      setSelectedFile(f);
+      setPreviewUrl(url);
+    } else {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      setSelectedFile(null);
+      setPreviewUrl('');
+    }
+  };
+
+  // cleanup preview URL on unmount
+  useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
 
   // Auto-fill from URL params or from topUps redux state when available
   useEffect(() => {
@@ -401,7 +420,7 @@ export default function PaymentConfirmationPage() {
                     <div className="flex text-sm text-gray-600 justify-center">
                       <label className="relative cursor-pointer bg-white dark:bg-gray-700 rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none px-3 py-1">
                         <span>Upload receipt</span>
-                        <input ref={fileRef} type="file" className="sr-only" accept=".pdf,.jpg,.jpeg,.png" />
+                        <input ref={fileRef} type="file" onChange={handleFileChange} className="sr-only" accept=".pdf,.jpg,.jpeg,.png" />
                       </label>
                       <p className="pl-1">or drag and drop</p>
                     </div>
@@ -409,8 +428,19 @@ export default function PaymentConfirmationPage() {
                       <svg className="w-5 h-5 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                       </svg>
-                      <span className="font-mono text-xs text-gray-700 dark:text-gray-300">{fileRef.current?.files?.[0]?.name || 'No file selected'}</span>
+                      <span className="font-mono text-xs text-gray-700 dark:text-gray-300">{selectedFile?.name || 'No file selected'}</span>
                     </div>
+                    {previewUrl && (
+                      <div className="mt-3 flex flex-col items-center">
+                        {selectedFile?.type?.startsWith('image/') ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={previewUrl} alt="preview" className="h-28 object-contain rounded-md border" />
+                        ) : (
+                          <a href={previewUrl} target="_blank" rel="noreferrer" className="text-sm text-blue-600 underline">Open file preview</a>
+                        )}
+                        <button type="button" onClick={() => { if (previewUrl) URL.revokeObjectURL(previewUrl); setPreviewUrl(''); setSelectedFile(null); if (fileRef.current) fileRef.current.value = ''; }} className="mt-2 text-xs text-red-600">Remove file</button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
