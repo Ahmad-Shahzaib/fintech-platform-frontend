@@ -8,6 +8,8 @@ import { fetchTopUps } from '@/redux/thunk/topUpsThunks';
 import { fetchPaymentMethods } from '@/redux/thunk/paymentMethodsThunks';
 import { fetchBankDetails } from '@/redux/slice/fetchBankDetailsThunk';
 import { fetchPaypalDetails } from '@/redux/slice/fetchPaypalDetailsThunk';
+import { useAlert } from '@/components/common/GlobalAlert';
+import { resetSubmitPayment } from '@/redux/slice/submitPaymentSlice';
 
 export default function PaymentConfirmationPage() {
   const dispatch = useAppDispatch();
@@ -24,6 +26,25 @@ export default function PaymentConfirmationPage() {
   const [selectedBankId, setSelectedBankId] = useState<string>('');
   const [selectedPaypalIndex, setSelectedPaypalIndex] = useState<number>(0);
   const fileRef = useRef<HTMLInputElement | null>(null);
+
+  // Global alert from provider (replaces inline messages below)
+  const { showAlert } = useAlert();
+
+  // Show global alerts when submit state changes, then clear submit state after 3s
+  useEffect(() => {
+    let timer: number | undefined;
+    if (submitState?.error) {
+      const msg = typeof submitState.error === 'string' ? submitState.error : (submitState.error?.message ?? 'Failed to submit payment.');
+      showAlert(String(msg), 'error');
+      if (typeof window !== 'undefined') timer = window.setTimeout(() => dispatch(resetSubmitPayment()), 3000);
+    } else if (submitState?.success) {
+      showAlert('Payment proof submitted successfully.', 'success');
+      if (typeof window !== 'undefined') timer = window.setTimeout(() => dispatch(resetSubmitPayment()), 3000);
+    }
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [submitState?.error, submitState?.success, showAlert, dispatch]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -405,10 +426,8 @@ export default function PaymentConfirmationPage() {
                 </button>
               </div>
 
-              {/* Result / Help Text */}
+              {/* Result / Help Text (global alerts used for errors/success) */}
               <div className="text-center text-sm text-gray-500">
-                {submitState?.error && <p className="text-red-600">{submitState.error}</p>}
-                {submitState?.success && <p className="text-green-600">Payment proof submitted successfully.</p>}
                 <p className="mt-1">Our team will verify your payment within 24 hours.</p>
                 <p className="mt-1">You will receive a confirmation email once approved.</p>
               </div>
