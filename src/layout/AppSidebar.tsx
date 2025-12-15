@@ -73,16 +73,30 @@ const navItems: NavItem[] = [
     path : "/repayment-requests",
 
   },
+  // {
+  //   name: "FAQs",
+  //   icon: <PageIcon />,
+  //   path : "/faq",
+  // },
+  // {
+  //   name: "Payment Methods",
+  //   icon: <SettingsIcon />,
+  //   subItems:
+  //   [
+  //     // faqs 
+  //     { name: "FAQs", path: "/faq", pro: false },
+  //     { name: "Banks", path: "/bank-detail", pro: false },
+  //     { name: "PayPal Details", path: "/paypal-detail", pro: false },
+  //   ]
+  // }
+
   {
-    name: "FAQs",
-    icon: <PageIcon />,
-    path : "/faq",
-  },
-  {
-    name: "Payment Methods",
+    name: "Settings",
     icon: <SettingsIcon />,
     subItems:
     [
+      // faqs 
+      { name: "FAQs", path: "/faq", pro: false },
       { name: "Banks", path: "/bank-detail", pro: false },
       { name: "PayPal Details", path: "/paypal-detail", pro: false },
     ]

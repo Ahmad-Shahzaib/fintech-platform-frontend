@@ -68,6 +68,15 @@ export default function PaymentConfirmationPage() {
       return;
     }
 
+    // Validate that amount paid does not exceed the selected top-up amount
+    const selectedTopUp = completedTopUps.find((t: any) => String(t.id) === String(topupId));
+    const maxAmount = selectedTopUp?.amount_aud ?? selectedTopUp?.total_aud ?? 0;
+    const paidAmount = parseFloat(String(amountPaid));
+    if (paidAmount > maxAmount) {
+      showAlert(`Payment amount cannot exceed $${maxAmount.toFixed(2)} (the selected top-up amount).`, 'error');
+      return;
+    }
+
     // Resolve topup identifier: if user provided a transaction id, map to internal id
     let submitTopupId = topupId;
     const matched = (topUpsState?.items || []).find((it: any) => String(it.id) === String(topupId) || String(it.transaction_id ?? '') === String(topupId));
@@ -197,6 +206,12 @@ export default function PaymentConfirmationPage() {
   // derive list of completed top-ups from redux state
   const completedTopUps = (topUpsState?.items || []).filter((t: any) => String(t?.status || '').toLowerCase() === 'completed');
 
+  // currently selected top-up object and its numeric min/max (AUD)
+  const selectedTopUp = completedTopUps.find((t: any) => String(t.id) === String(topupId));
+  const maxAmount = parseFloat(String(selectedTopUp?.amount_aud ?? selectedTopUp?.total_aud ?? selectedTopUp?.amount ?? 0)) || 0;
+  // use explicit min if provided on the top-up, otherwise default to 0.01
+  const minAmount = parseFloat(String(selectedTopUp?.min_amount_aud ?? selectedTopUp?.min_amount ?? 0.01)) || 0.01;
+
   // If there are top-ups but none are completed, clear any entered topupId
   useEffect(() => {
     if (topUpsState?.items && topUpsState.items.length > 0 && completedTopUps.length === 0) {
@@ -267,12 +282,34 @@ export default function PaymentConfirmationPage() {
                   <input
                     type="number"
                     value={amountPaid}
-                    onChange={(e) => setAmountPaid(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      // allow user to type freely but keep state as string for UX; validations run on blur/submit
+                      setAmountPaid(val);
+                    }}
                     placeholder="0.00"
                     step="0.01"
-                    className="w-full pl-8 pr-4 py-3.5 bg-gray-50 dark:bg-gray-700 border-0 rounded-xl text-gray-900 dark:text-gray-100 text-sm placeholder-gray-400 focus:ring-2 focus:ring-blue-500 transition-all"
+                    min={minAmount}
+                    max={maxAmount || undefined}
+                    className={`w-full pl-8 pr-4 py-3.5 bg-gray-50 dark:bg-gray-700 border-0 rounded-xl text-gray-900 dark:text-gray-100 text-sm placeholder-gray-400 focus:ring-2 transition-all ${
+                      topupId && amountPaid && parseFloat(amountPaid) > maxAmount
+                        ? 'focus:ring-red-500 ring-2 ring-red-500'
+                        : topupId && amountPaid && parseFloat(amountPaid) < minAmount
+                        ? 'focus:ring-red-500 ring-2 ring-red-500'
+                        : 'focus:ring-blue-500'
+                    }`}
                   />
                 </div>
+                {topupId && amountPaid && (parseFloat(amountPaid) > maxAmount || parseFloat(amountPaid) < minAmount) && (
+                  <p className="mt-2 text-sm text-red-500">
+                    {parseFloat(amountPaid) > maxAmount
+                      ? `Amount cannot exceed $${maxAmount.toFixed(2)}`
+                      : `Amount must be at least $${minAmount.toFixed(2)}`}
+                  </p>
+                )}
+                {topupId && maxAmount > 0 && (
+                  <p className="mt-1 text-xs text-gray-500">Allowed range: ${minAmount.toFixed(2)} - ${maxAmount.toFixed(2)} AUD</p>
+                )}
               </div>
 
               {/* Payment Method */}
