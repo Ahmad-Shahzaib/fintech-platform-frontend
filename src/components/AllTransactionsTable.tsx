@@ -12,7 +12,7 @@ interface Transaction {
   userName: string;
   currency: string;
   network: string;
-  amountAud: number;
+  amountAud: number;  
   status: 'pending' | 'approved' | 'rejected' | 'processing' | 'completed' | 'cancelled';
 }
 
