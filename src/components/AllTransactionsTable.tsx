@@ -1,35 +1,14 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
-import { format, parseISO, startOfDay, endOfDay } from 'date-fns';
+import { format, parseISO, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
 import { DayPicker, DateRange } from 'react-day-picker';
-import 'react-day-picker/dist/style.css'; 
-
-interface Transaction {
-  id: string;
-  transactionId: string;
-  date: string;
-  userName: string;
-  currency: string;
-  network: string;
-  amountAud: number;  
-  status: 'pending' | 'approved' | 'rejected' | 'processing' | 'completed' | 'cancelled';
-}
-
-const mockData: Transaction[] = [
-  { id: '1', transactionId: 'TXN-20251217-001', date: '2025-12-17', userName: 'John Doe', currency: 'USDT', network: 'TRC20', amountAud: 1500, status: 'pending' },
-  { id: '2', transactionId: 'TXN-20251216-045', date: '2025-12-16', userName: 'Alice Smith', currency: 'BTC', network: 'Bitcoin', amountAud: 3200, status: 'approved' },
-  { id: '3', transactionId: 'TXN-20251215-112', date: '2025-12-15', userName: 'Michael Chen', currency: 'ETH', network: 'ERC20', amountAud: 890, status: 'processing' },
-  { id: '4', transactionId: 'TXN-20251214-078', date: '2025-12-14', userName: 'Sarah Wilson', currency: 'USDC', network: 'Polygon', amountAud: 2100, status: 'completed' },
-  { id: '5', transactionId: 'TXN-20251213-203', date: '2025-12-13', userName: 'David Brown', currency: 'USDT', network: 'ERC20', amountAud: 500, status: 'rejected' },
-  { id: '6', transactionId: 'TXN-20251212-156', date: '2025-12-12', userName: 'Emma Taylor', currency: 'BTC', network: 'Bitcoin', amountAud: 4500, status: 'completed' },
-  { id: '7', transactionId: 'TXN-20251210-089', date: '2025-12-10', userName: 'Liam Johnson', currency: 'USDT', network: 'TRC20', amountAud: 1200, status: 'pending' },
-  { id: '8', transactionId: 'TXN-20251209-321', date: '2025-12-09', userName: 'Olivia Martinez', currency: 'ETH', network: 'ERC20', amountAud: 1800, status: 'pending' },
-  { id: '9', transactionId: 'TXN-20251208-456', date: '2025-12-08', userName: 'Noah Lee', currency: 'USDT', network: 'TRC20', amountAud: 3000, status: 'completed' },
-  { id: '10', transactionId: 'TXN-20251207-789', date: '2025-12-07', userName: 'Sophia Garcia', currency: 'BTC', network: 'Bitcoin', amountAud: 5500, status: 'approved' },
-  { id: '11', transactionId: 'TXN-20251206-234', date: '2025-12-06', userName: 'James Wilson', currency: 'USDC', network: 'Polygon', amountAud: 950, status: 'rejected' },
-  { id: '12', transactionId: 'TXN-20251205-567', date: '2025-12-05', userName: 'Isabella Moore', currency: 'USDT', network: 'ERC20', amountAud: 2200, status: 'processing' },
-];
+import 'react-day-picker/dist/style.css';
+import { useAppDispatch, useAppSelector } from '@/redux/hooks';
+import { fetchTransactions, exportTransactionsToExcel } from '@/redux/thunk/transactionsThunks';
+import type { Transaction } from '@/redux/thunk/transactionsThunks';
+import { Button } from './ui/button';
+import ExcelJS from 'exceljs';
 
 const StatusBadge: React.FC<{ status: Transaction['status'] }> = ({ status }) => {
   const variants: Record<Transaction['status'], string> = {
@@ -50,6 +29,9 @@ const StatusBadge: React.FC<{ status: Transaction['status'] }> = ({ status }) =>
 };
 
 const AllTransactionsTable: React.FC = () => {
+  const dispatch = useAppDispatch();
+  const { items: transactions, loading, pagination } = useAppSelector(state => state.transactions);
+  
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [selectedRange, setSelectedRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
     from: undefined,
@@ -58,41 +40,151 @@ const AllTransactionsTable: React.FC = () => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const datePickerRef = useRef<HTMLDivElement>(null);
 
-  const itemsPerPage = 8;
+  // Handle Excel Export (Client-side)
+  const handleExport = async () => {
+    try {
+      setIsExporting(true);
+
+      // Use filtered transactions currently displayed
+      const dataToExport = displayTransactions;
+
+      if (dataToExport.length === 0) {
+        alert('No transactions to export');
+        setIsExporting(false);
+        return;
+      }
+
+      // Create workbook and worksheet
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Transactions');
+
+      // Define columns
+      worksheet.columns = [
+        { header: 'Transaction ID', key: 'transactionId', width: 18 },
+        { header: 'Date', key: 'date', width: 20 },
+        { header: 'User Name', key: 'userName', width: 18 },
+        { header: 'Currency', key: 'currencyCode', width: 12 },
+        { header: 'Network', key: 'networkName', width: 15 },
+        { header: 'Amount (AUD)', key: 'amountAud', width: 15 },
+        { header: 'Status', key: 'status', width: 12 },
+      ];
+
+      // Style header row
+      worksheet.getRow(1).font = {
+        bold: true,
+        color: { argb: 'FFFFFFFF' },
+      };
+      worksheet.getRow(1).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF1e40af' },
+      };
+      worksheet.getRow(1).alignment = {
+        horizontal: 'center',
+        vertical: 'middle',
+      };
+
+      // Add data rows
+      dataToExport.forEach((txn) => {
+        worksheet.addRow({
+          transactionId: txn.transactionId,
+          date: format(parseISO(txn.date), 'MMM dd, yyyy HH:mm:ss'),
+          userName: txn.userName,
+          currencyCode: txn.currencyCode,
+          networkName: txn.networkName,
+          amountAud: String(txn.amountAud),
+          status: txn.status,
+        });
+      });
+
+      // Format amount column as currency
+      worksheet.getColumn('amountAud').numFmt = '$#,##0.00';
+
+      // Center align status column
+      worksheet.getColumn('status').alignment = { horizontal: 'center' };
+
+      // Generate file
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+
+      // Download
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `transactions_${format(new Date(), 'yyyy-MM-dd_HHmmss')}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      alert(`Successfully exported ${dataToExport.length} transactions`);
+    } catch (error: any) {
+      console.error('Export failed:', error);
+      alert(`Export failed: ${error?.message || error || 'Unknown error'}`);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedRange, statusFilter]);
+
+  // Fetch transactions when filters or page change
+  useEffect(() => {
+    const params: any = { page: currentPage };
+    
+    if (statusFilter) {
+      params.status = statusFilter;
+    }
+    
+    if (selectedRange.from && selectedRange.to) {
+      params.from_date = format(selectedRange.from, 'yyyy-MM-dd');
+      params.to_date = format(selectedRange.to, 'yyyy-MM-dd');
+    }
+    
+    dispatch(fetchTransactions(params));
+  }, [dispatch, currentPage, statusFilter, selectedRange]);
 
   // Format display value
   const dateRangeDisplay = selectedRange.from && selectedRange.to
     ? `${format(selectedRange.from, 'yyyy-MM-dd')} to ${format(selectedRange.to, 'yyyy-MM-dd')}`
     : '';
 
-  // Filtering
-  const filteredData = mockData.filter((txn) => {
-    if (statusFilter && txn.status !== statusFilter) return false;
+  // Base mapped transactions
+  const mappedTransactions = transactions.map((txn) => ({
+    ...txn,
+    id: String(txn.id),
+    transactionId: txn.transaction_id,
+    date: txn.created_at,
+    userName: txn.user?.name || 'N/A',
+    currencyCode: txn.currency?.code || 'N/A',
+    networkName: txn.network?.name || 'N/A',
+    amountAud: parseFloat(txn.amount_aud),
+    parsedDate: parseISO(txn.created_at), // For client-side filtering
+  }));
 
-    if (selectedRange.from && selectedRange.to) {
-      const txnDate = parseISO(txn.date);
-      const start = startOfDay(selectedRange.from);
-      const end = endOfDay(selectedRange.to);
-      if (txnDate < start || txnDate > end) return false;
-    }
+  // Client-side date range filtering
+  const filteredTransactions = selectedRange.from && selectedRange.to
+    ? mappedTransactions.filter((txn) => {
+        return isWithinInterval(txn.parsedDate, {
+          start: startOfDay(selectedRange.from!),
+          end: endOfDay(selectedRange.to!),
+        });
+      })
+    : mappedTransactions;
 
-    return true;
-  });
+  // Use filtered list for display
+  const displayTransactions = filteredTransactions;
 
-  // Pagination
-  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
-  const paginatedData = filteredData.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
-
-  // Reset page when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [statusFilter, selectedRange]);
+  // Total pages (fallback to client-side count if no pagination)
+  const totalPages = pagination?.last_page || Math.ceil(displayTransactions.length / 8);
+  const totalItems = pagination?.total || displayTransactions.length;
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -108,11 +200,11 @@ const AllTransactionsTable: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const toggleDropdown = (id: string) => {
-    setOpenDropdownId((prev) => (prev === id ? null : id));
+  const toggleDropdown = (id: number) => {
+    setOpenDropdownId((prev) => (prev === String(id) ? null : String(id)));
   };
 
-  const ActionDropdown = ({ txn }: { txn: Transaction }) => (
+  const ActionDropdown = ({ txn }: { txn: any }) => (
     <div className="relative inline-block text-left" ref={dropdownRef}>
       <button
         onClick={(e) => {
@@ -124,7 +216,7 @@ const AllTransactionsTable: React.FC = () => {
         <span className="text-2xl leading-none text-gray-600 dark:text-gray-300">⋯</span>
       </button>
 
-      {openDropdownId === txn.id && (
+      {openDropdownId === String(txn.id) && (
         <div className="absolute right-0 mt-2 w-48 origin-top-right bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50">
           <div className="py-1">
             <button
@@ -188,6 +280,7 @@ const AllTransactionsTable: React.FC = () => {
               <option value="completed">Completed</option>
               <option value="cancelled">Cancelled</option>
             </select>
+            
 
             {/* Date Range Picker Trigger */}
             <div className="relative" ref={datePickerRef}>
@@ -238,11 +331,18 @@ const AllTransactionsTable: React.FC = () => {
                 </div>
               )}
             </div>
+            <Button
+              onClick={handleExport}
+              disabled={isExporting || loading}
+              className={isExporting ? 'opacity-70 cursor-not-allowed' : ''}
+            >
+              {isExporting ? 'Exporting...' : 'Exports'}
+            </Button>
           </div>
+          
         </div>
       </div>
 
-      {/* Rest of your table remains 100% unchanged */}
       {/* Desktop Table */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div className="overflow-x-auto">
@@ -260,24 +360,41 @@ const AllTransactionsTable: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {paginatedData.map((txn) => (
-                <tr key={txn.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
-                  <td className="px-6 py-4 text-sm font-mono text-gray-900 dark:text-gray-100">{txn.transactionId}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{format(parseISO(txn.date), 'MMM dd, yyyy')}</td>
-                  <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">{txn.userName}</td>
-                  <td className="px-6 py-4">
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                      {txn.currency}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{txn.network}</td>
-                  <td className="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-gray-100">${txn.amountAud.toLocaleString()}</td>
-                  <td className="px-6 py-4"><StatusBadge status={txn.status} /></td>
-                  <td className="px-6 py-4 text-right">
-                    <ActionDropdown txn={txn} />
+              {loading ? (
+                <tr>
+                  <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="w-5 h-5 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
+                      Loading transactions...
+                    </div>
                   </td>
                 </tr>
-              ))}
+              ) : displayTransactions.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
+                    No transactions found
+                  </td>
+                </tr>
+              ) : (
+                displayTransactions.map((txn) => (
+                  <tr key={txn.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
+                    <td className="px-6 py-4 text-sm font-mono text-gray-900 dark:text-gray-100">{txn.transactionId}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{format(parseISO(txn.date), 'MMM dd, yyyy')}</td>
+                    <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">{txn.userName}</td>
+                    <td className="px-6 py-4">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                        {txn.currencyCode}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{txn.networkName}</td>
+                    <td className="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-gray-100">${txn.amountAud.toLocaleString('en-AU', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td className="px-6 py-4"><StatusBadge status={txn.status} /></td>
+                    <td className="px-6 py-4 text-right">
+                      <ActionDropdown txn={txn} />
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -285,19 +402,19 @@ const AllTransactionsTable: React.FC = () => {
         {/* Pagination */}
         <div className="px-6 py-4 flex items-center justify-between border-t border-gray-200 dark:border-gray-700">
           <p className="text-sm text-gray-700 dark:text-gray-300">
-            Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredData.length)} of {filteredData.length} transactions
+            Showing {displayTransactions.length > 0 ? displayTransactions.length : '0'} {displayTransactions.length > 0 && `of ${totalItems}`} transactions
           </p>
           <div className="flex gap-2">
             <button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
+              disabled={currentPage === 1 || loading}
               className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
             >
               Previous
             </button>
             <button
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
+              disabled={currentPage === totalPages || loading}
               className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
             >
               Next
@@ -306,29 +423,42 @@ const AllTransactionsTable: React.FC = () => {
         </div>
       </div>
 
-      {/* Mobile Cards */}
+      {/* Mobile Cards - Same filtering applied */}
       <div className="md:hidden space-y-4">
-        {paginatedData.map((txn) => (
-          <div key={txn.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Transaction ID</p>
-                <p className="font-mono text-sm font-medium text-gray-900 dark:text-white">{txn.transactionId}</p>
-              </div>
-              <div className="flex items-center gap-3">
-                <StatusBadge status={txn.status} />
-                <ActionDropdown txn={txn} />
-              </div>
-            </div>
-
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between"><span className="text-gray-500">Date</span><span className="font-medium">{format(parseISO(txn.date), 'MMM dd, yyyy')}</span></div>
-              <div className="flex justify-between"><span className="text-gray-500">User</span><span className="font-medium">{txn.userName}</span></div>
-              <div className="flex justify-between"><span className="text-gray-500">Amount</span><span className="text-lg font-bold">${txn.amountAud.toLocaleString()}</span></div>
-              <div className="flex justify-between"><span className="text-gray-500">Crypto</span><span className="font-medium">{txn.currency} ({txn.network})</span></div>
-            </div>
+        {loading ? (
+          <div className="flex items-center justify-center gap-2 py-8">
+            <div className="w-5 h-5 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
+            <span className="text-gray-500">Loading transactions...</span>
           </div>
-        ))}
+        ) : displayTransactions.length === 0 ? (
+          <div className="py-8 text-center text-gray-500">
+            No transactions found
+          </div>
+        ) : (
+          <>
+            {displayTransactions.map((txn) => (
+              <div key={txn.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Transaction ID</p>
+                    <p className="font-mono text-sm font-medium text-gray-900 dark:text-white">{txn.transactionId}</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <StatusBadge status={txn.status} />
+                    <ActionDropdown txn={txn} />
+                  </div>
+                </div>
+
+                <div className="space-y-3 text-sm">
+                  <div className="flex justify-between"><span className="text-gray-500">Date</span><span className="font-medium">{format(parseISO(txn.date), 'MMM dd, yyyy')}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">User</span><span className="font-medium">{txn.userName}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">Amount</span><span className="text-lg font-bold">${txn.amountAud.toLocaleString('en-AU', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">Crypto</span><span className="font-medium">{txn.currencyCode} ({txn.networkName})</span></div>
+                </div>
+              </div>
+            ))}
+          </>
+        )}
 
         <div className="flex justify-between items-center pt-4">
           <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -337,15 +467,15 @@ const AllTransactionsTable: React.FC = () => {
           <div className="flex gap-2">
             <button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="px-4 py-2 border rounded-lg text-sm disabled:opacity-50"
+              disabled={currentPage === 1 || loading}
+              className="px-4 py-2 border rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Prev
             </button>
             <button
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="px-4 py-2 border rounded-lg text-sm disabled:opacity-50"
+              disabled={currentPage === totalPages || loading}
+              className="px-4 py-2 border rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Next
             </button>

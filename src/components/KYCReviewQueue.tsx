@@ -2,9 +2,11 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { format, parseISO } from 'date-fns';
+import { useAppDispatch, useAppSelector } from '@/redux/hooks';
+import { fetchAdminAllKyc } from '@/redux/thunk/adminAllKycThunks';
 
 interface KYCRequest {
-  id: string;
+  id: number;
   userName: string;
   email: string;
   submittedDate: string; // ISO date
@@ -14,42 +16,6 @@ interface KYCRequest {
   selfie: string;  // image URL
   status: 'pending' | 'under_review' | 'approved' | 'rejected';
 }
-
-const mockKYCData: KYCRequest[] = [
-  {
-    id: '1',
-    userName: 'John Doe',
-    email: 'john.doe@example.com',
-    submittedDate: '2025-12-17',
-    documentType: 'Passport',
-    idFront: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=800&q=80',
-    idBack: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=800&q=80',
-    selfie: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=80',
-    status: 'pending',
-  },
-  {
-    id: '2',
-    userName: 'Alice Smith',
-    email: 'alice.smith@example.com',
-    submittedDate: '2025-12-16',
-    documentType: 'Driver License',
-    idFront: 'https://images.unsplash.com/photo-1590086782792-7613c5d2f9ec?w=800&q=80',
-    idBack: 'https://images.unsplash.com/photo-1590086782792-7613c5d2f9ec?w=800&q=80',
-    selfie: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=800&q=80',
-    status: 'under_review',
-  },
-  {
-    id: '3',
-    userName: 'Michael Chen',
-    email: 'michael.chen@example.com',
-    submittedDate: '2025-12-15',
-    documentType: 'National ID',
-    idFront: 'https://images.unsplash.com/photo-1581093450021-4a7360e9a6b5?w=800&q=80',
-    idBack: 'https://images.unsplash.com/photo-1581093450021-4a7360e9a6b5?w=800&q=80',
-    selfie: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=800&q=80',
-    status: 'pending',
-  },
-];
 
 const StatusBadge: React.FC<{ status: KYCRequest['status'] }> = ({ status }) => {
   const variants: Record<KYCRequest['status'], string> = {
@@ -91,16 +57,46 @@ const ImageViewer: React.FC<{ src: string; alt: string; onClose: () => void }> =
 };
 
 const KYCReviewQueue: React.FC = () => {
+  const dispatch = useAppDispatch();
+  const { list, loading, pagination } = useAppSelector(state => state.adminAllKyc);
+  
   const [statusFilter, setStatusFilter] = useState<string>('');
-  const [currentPage] = useState(1); // Pagination can be added later if needed
+  const [currentPage, setCurrentPage] = useState(1);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<{ src: string; alt: string } | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const filteredData = mockKYCData.filter((kyc) => {
+  // Fetch KYC records on mount and when filters/page changes
+  useEffect(() => {
+    dispatch(fetchAdminAllKyc({ page: currentPage }));
+  }, [dispatch, currentPage]);
+
+  // Reset pagination when filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter]);
+
+  // Map API response to display format
+  const displayKYCs = list.map((kyc) => ({
+    id: kyc.id,
+    userName: kyc.user?.name || kyc.full_name || 'N/A',
+    email: kyc.user?.email || 'N/A',
+    submittedDate: kyc.submitted_at,
+    documentType: kyc.document_type?.replace('_', ' ') || 'N/A',
+    idFront: kyc.document_front_url || '',
+    idBack: kyc.document_back_url || '',
+    selfie: kyc.selfie_url || '',
+    status: (kyc.status?.toLowerCase() || 'pending') as 'pending' | 'under_review' | 'approved' | 'rejected',
+  }));
+
+  // Apply status filter
+  const filteredData = displayKYCs.filter((kyc) => {
     if (statusFilter && kyc.status !== statusFilter) return false;
     return true;
   });
+
+  // Total pages from pagination
+  const totalPages = pagination?.last_page || 1;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -112,11 +108,11 @@ const KYCReviewQueue: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const toggleDropdown = (id: string) => {
-    setOpenDropdownId((prev) => (prev === id ? null : id));
+  const toggleDropdown = (id: string | number) => {
+    setOpenDropdownId((prev) => (prev === String(id) ? null : String(id)));
   };
 
-  const ActionDropdown = ({ kyc }: { kyc: KYCRequest }) => (
+  const ActionDropdown = ({ kyc }: { kyc: (typeof filteredData)[0] }) => (
     <div className="relative inline-block text-left" ref={dropdownRef}>
       <button
         onClick={(e) => {
@@ -128,7 +124,7 @@ const KYCReviewQueue: React.FC = () => {
         <span className="text-2xl leading-none text-gray-600 dark:text-gray-300">⋯</span>
       </button>
 
-      {openDropdownId === kyc.id && (
+      {openDropdownId === String(kyc.id) && (
         <div className="absolute right-0 mt-2 w-48 origin-top-right bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50">
           <div className="py-1">
             <button
@@ -200,7 +196,23 @@ const KYCReviewQueue: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {filteredData.map((kyc) => (
+              {loading ? (
+                <tr>
+                  <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="w-5 h-5 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
+                      Loading KYC requests...
+                    </div>
+                  </td>
+                </tr>
+              ) : filteredData.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
+                    No KYC requests found
+                  </td>
+                </tr>
+              ) : (
+                filteredData.map((kyc) => (
                 <tr key={kyc.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
                   <td className="px-6 py-4">
                     <div className="text-sm font-medium text-gray-900 dark:text-white">{kyc.userName}</div>
@@ -239,15 +251,50 @@ const KYCReviewQueue: React.FC = () => {
                     <ActionDropdown kyc={kyc} />
                   </td>
                 </tr>
-              ))}
+              ))
+              )}
             </tbody>
           </table>
+        </div>
+
+        {/* Pagination */}
+        <div className="px-6 py-4 flex items-center justify-between border-t border-gray-200 dark:border-gray-700">
+          <p className="text-sm text-gray-700 dark:text-gray-300">
+            Showing {filteredData.length > 0 ? `${filteredData.length} of ${pagination?.total || 0}` : '0'} requests
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1 || loading}
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
+            >
+              Previous
+            </button>
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages || loading}
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
+            >
+              Next
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Mobile Cards */}
       <div className="md:hidden space-y-6">
-        {filteredData.map((kyc) => (
+        {loading ? (
+          <div className="flex items-center justify-center gap-2 py-8">
+            <div className="w-5 h-5 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
+            <span className="text-gray-500">Loading KYC requests...</span>
+          </div>
+        ) : filteredData.length === 0 ? (
+          <div className="py-8 text-center text-gray-500">
+            No KYC requests found
+          </div>
+        ) : (
+          <>
+            {filteredData.map((kyc) => (
           <div key={kyc.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
             <div className="flex justify-between items-start mb-4">
               <div>
@@ -298,6 +345,30 @@ const KYCReviewQueue: React.FC = () => {
             </div>
           </div>
         ))}
+          </>
+        )}
+
+        <div className="flex justify-between items-center pt-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Page {currentPage} of {totalPages}
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1 || loading}
+              className="px-4 py-2 border rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Prev
+            </button>
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages || loading}
+              className="px-4 py-2 border rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Image Lightbox Viewer */}

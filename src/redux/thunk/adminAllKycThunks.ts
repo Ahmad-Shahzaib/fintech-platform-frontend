@@ -13,6 +13,9 @@ export interface AdminAllKycItem {
     document_type: string;
     status: string;
     submitted_at: string;
+    document_front_url?: string;
+    document_back_url?: string;
+    selfie_url?: string;
 }
 
 export interface AdminAllKycResponse {
@@ -44,5 +47,8 @@ export const fetchAdminAllKyc = createAsyncThunk<
         return rejectWithValue('Failed to fetch all KYC records');
     }
 });
+
+
+
 
 export default {};

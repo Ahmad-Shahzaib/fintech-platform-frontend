@@ -1,8 +1,10 @@
 // components/AdminStatsDashboard.tsx
 "use client";
 
-import React, { useState } from 'react';
-import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
+import React, { useState, useEffect } from 'react';
+import { format, parseISO } from 'date-fns';
+import { useAppDispatch, useAppSelector } from '@/redux/hooks';
+import { fetchFinancialSummary } from '@/redux/thunk/financialSummaryThunks';
 
 interface Stats {
   totalRevenue: number;
@@ -14,29 +16,26 @@ interface Stats {
 }
 
 const AdminStatsDashboard: React.FC = () => {
+  const dispatch = useAppDispatch();
+  const { data: financialData, loading } = useAppSelector(state => state.financialSummary);
+
   const [dateRange, setDateRange] = useState<'thisMonth' | 'lastMonth' | 'custom'>('thisMonth');
 
-  // Mock data - replace with real API data later
-  const stats: Stats = {
-    totalRevenue: 124580,
-    transactionVolume: 3420000,
-    numberOfTransactions: 842,
-    outstandingRepayments: 45670,
-    latePaymentsCount: 38,
-    lateFeesCollected: 2850,
-  };
+  // Fetch financial summary on mount and when date range changes
+  useEffect(() => {
+    dispatch(fetchFinancialSummary({}));
+  }, [dispatch]);
 
   const getDateRangeLabel = () => {
-    switch (dateRange) {
-      case 'thisMonth':
-        return format(new Date(), 'MMMM yyyy');
-      case 'lastMonth':
-        return format(subMonths(new Date(), 1), 'MMMM yyyy');
-      case 'custom':
-        return 'Custom Range';
-      default:
-        return 'This Month';
+    if (!financialData?.period) return 'Loading...';
+    
+    const startDate = new Date(financialData.period.start);
+    const endDate = new Date(financialData.period.end);
+    
+    if (dateRange === 'custom') {
+      return `${format(startDate, 'MMM dd')} - ${format(endDate, 'MMM dd, yyyy')}`;
     }
+    return format(startDate, 'MMMM yyyy');
   };
 
   const StatCard = ({
@@ -106,77 +105,88 @@ const AdminStatsDashboard: React.FC = () => {
 
       {/* Stat Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        <StatCard
-          title="Total Revenue"
-          subtitle="This Month"
-          value={stats.totalRevenue}
-          icon={
-            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-            </svg>
-          }
-          color="bg-green-600"
-        />
+        {loading ? (
+          <div className="col-span-full py-12 text-center">
+            <div className="flex items-center justify-center gap-2">
+              <div className="w-5 h-5 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
+              <span className="text-gray-500">Loading financial data...</span>
+            </div>
+          </div>
+        ) : (
+          <>
+            <StatCard
+              title="Total Revenue"
+              subtitle="Platform + Network Fees"
+              value={financialData?.revenue ? parseFloat(financialData.revenue.total_revenue) : 0}
+              icon={
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                </svg>
+              }
+              color="bg-green-600"
+            />
 
-        <StatCard
-          title="Transaction Volume"
-          subtitle="Total value processed"
-          value={stats.transactionVolume}
-          icon={
-            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-            </svg>
-          }
-          color="bg-blue-600"
-        />
+            <StatCard
+              title="Total Lent"
+              subtitle="Total value processed"
+              value={financialData?.lending ? parseFloat(financialData.lending.total_lent) : 0}
+              icon={
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                </svg>
+              }
+              color="bg-blue-600"
+            />
 
-        <StatCard
-          title="Number of Transactions"
-          subtitle="Completed this period"
-          value={stats.numberOfTransactions}
-          icon={
-            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-            </svg>
-          }
-          color="bg-indigo-600"
-        />
+            <StatCard
+              title="Number of Transactions"
+              subtitle="Total lending transactions"
+              value={financialData?.lending?.transaction_count ?? 0}
+              icon={
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+              }
+              color="bg-indigo-600"
+            />
 
-        <StatCard
-          title="Outstanding Repayments"
-          subtitle="Currently due"
-          value={stats.outstandingRepayments}
-          icon={
-            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          }
-          color="bg-orange-600"
-        />
+            <StatCard
+              title="Outstanding Repayments"
+              subtitle="Total pending & partial"
+              value={financialData?.outstanding ? parseFloat(financialData.outstanding.total_outstanding) : 0}
+              icon={
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              }
+              color="bg-orange-600"
+            />
 
-        <StatCard
-          title="Late Payments"
-          subtitle="Overdue count"
-          value={stats.latePaymentsCount}
-          icon={
-            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-          }
-          color="bg-red-600"
-        />
+            <StatCard
+              title="Late Payments"
+              subtitle="Overdue count"
+              value={financialData?.late_payments?.count ?? 0}
+              icon={
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              }
+              color="bg-red-600"
+            />
 
-        <StatCard
-          title="Late Fees Collected"
-          subtitle="From overdue payments"
-          value={stats.lateFeesCollected}
-          icon={
-            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          }
-          color="bg-purple-600"
-        />
+            <StatCard
+              title="On-Time Payment Rate"
+              subtitle="Performance metric"
+              value={`${financialData?.performance?.on_time_payment_rate?.toFixed(1) ?? 0}%`}
+              icon={
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              }
+              color="bg-purple-600"
+            />
+          </>
+        )}
       </div>
     </div>
   );

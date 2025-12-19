@@ -37,6 +37,8 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
+    "exceljs": "^4.4.0",
+    "file-saver": "^2.0.5",
     "flatpickr": "^4.6.13",
     "lucide-react": "^0.554.0",
     "next": "16.0.7",
@@ -53,6 +55,7 @@
     "react-toastify": "^11.0.5",
     "swiper": "^11.2.10",
     "tailwind-merge": "^2.6.0",
+    "xlsx": "^0.18.5",
     "zod": "^4.1.13"
   },
   "devDependencies": {

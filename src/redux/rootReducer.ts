@@ -30,6 +30,10 @@ import bankDetailsReducer from './slice/bankDetailsSlice';
 import paypalDetailsReducer from './slice/paypalSlice';
 import paymentProofsReducer from './slice/paymentProofsSlice';
 import adminPaymentProofsReducer from './slice/adminPaymentProofsSlice';
+import transactionsReducer from './slice/transactionsSlice';
+import usersListReducer from './slice/usersListSlice';
+import financialSummaryReducer from './slice/financialSummarySlice';
+import paymentsListReducer from './slice/paymentsListSlice';
 
 // New reducer
 
@@ -64,6 +68,10 @@ const rootReducer = combineReducers({
   paypalDetails: paypalDetailsReducer,
   paymentProofs: paymentProofsReducer,
   adminPaymentProofs: adminPaymentProofsReducer,
+  transactions: transactionsReducer,
+  usersList: usersListReducer,
+  financialSummary: financialSummaryReducer,
+  paymentsList: paymentsListReducer,
   
 
 
