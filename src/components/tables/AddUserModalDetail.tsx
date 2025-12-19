@@ -30,6 +30,7 @@ const AddUserModalDetail = () => {
     })();
     const meta = (usersState as any).meta;
     const [page, setPage] = useState<number>(meta?.current_page ?? 1);
+    const [searchQuery, setSearchQuery] = useState<string>('');
 
     const totalPages = meta?.last_page ?? 1;
     const currentPage = meta?.current_page ?? page;
@@ -48,6 +49,19 @@ const AddUserModalDetail = () => {
         }
         return Array.from(pages).sort((a, b) => a - b);
     }, [totalPages, currentPage]);
+
+    // Filter users based on search query
+    const filteredUsers = useMemo(() => {
+        if (!searchQuery.trim()) return users;
+        const query = searchQuery.toLowerCase();
+        return users.filter((user: any) => {
+            return (
+                user.name?.toLowerCase().includes(query) ||
+                user.email?.toLowerCase().includes(query) ||
+                user.id?.toString().includes(query)
+            );
+        });
+    }, [users, searchQuery]);
 
     useEffect(() => {
         dispatch(fetchUsers({ page }));
@@ -257,9 +271,30 @@ const AddUserModalDetail = () => {
             </Head>
 
             <div className="container mx-auto px-4">
-                <div className="flex justify-between items-center mb-6">
+                <div className="flex justify-between items-center mb-6 gap-4">
                     <h1 className="text-2xl font-bold text-gray-800 dark:text-white">User Management</h1>
 
+                    {/* Search Bar */}
+                    <div className="flex gap-2 w-80">
+                        <input
+                            type="text"
+                            placeholder="Search by name, email, or ID..."
+                            value={searchQuery}
+                            onChange={(e) => {
+                                setSearchQuery(e.target.value);
+                                setPage(1); // Reset to first page when searching
+                            }}
+                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
+                        />
+                        {searchQuery && (
+                            <button
+                                onClick={() => setSearchQuery('')}
+                                className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg transition-colors dark:bg-gray-600 dark:hover:bg-gray-500 dark:text-white"
+                            >
+                                Clear
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 {/* Users Table */}
@@ -293,8 +328,14 @@ const AddUserModalDetail = () => {
                                     <tr>
                                         <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-300">Loading...</td>
                                     </tr>
+                                ) : filteredUsers.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-300">
+                                            {searchQuery ? 'No users found matching your search.' : 'No users available.'}
+                                        </td>
+                                    </tr>
                                 ) : (
-                                    users.map((user: any) => {
+                                    filteredUsers.map((user: any) => {
                                         const roleLabel = typeof user.role === 'string' ? user.role : user.role?.name || user.role?.display_name || 'user';
                                         const isActive = user.status ? user.status === 'active' : user.active === true;
                                         return (
