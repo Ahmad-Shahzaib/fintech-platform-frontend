@@ -3,7 +3,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { format, parseISO } from 'date-fns';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
-import { fetchAdminAllKyc } from '@/redux/thunk/adminAllKycThunks';
+import { fetchAdminAllKyc, approveAdminAllKyc, rejectAdminAllKyc } from '@/redux/thunk/adminAllKycThunks';
+import { useAlert } from './common/GlobalAlert';
 
 interface KYCRequest {
   id: number;
@@ -59,12 +60,17 @@ const ImageViewer: React.FC<{ src: string; alt: string; onClose: () => void }> =
 const KYCReviewQueue: React.FC = () => {
   const dispatch = useAppDispatch();
   const { list, loading, pagination } = useAppSelector(state => state.adminAllKyc);
+  const { showAlert } = useAlert();
   
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [currentPage, setCurrentPage] = useState(1);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<{ src: string; alt: string } | null>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [showApproveModal, setShowApproveModal] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [currentActionId, setCurrentActionId] = useState<number | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
 
   // Fetch KYC records on mount and when filters/page changes
   useEffect(() => {
@@ -100,21 +106,187 @@ const KYCReviewQueue: React.FC = () => {
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      // Close dropdown only if clicking outside dropdown area
+      if (openDropdownId !== null) {
+        const target = event.target as HTMLElement;
+        // Check if click is on a button or within dropdown menu
+        if (target.closest('[data-dropdown-trigger]') || target.closest('[data-dropdown-menu]')) {
+          return;
+        }
+        // Close dropdown on outside click
         setOpenDropdownId(null);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [openDropdownId]);
 
   const toggleDropdown = (id: string | number) => {
-    setOpenDropdownId((prev) => (prev === String(id) ? null : String(id)));
+    console.log('toggleDropdown called with id:', id);
+    setOpenDropdownId((prev) => {
+      const newVal = prev === String(id) ? null : String(id);
+      console.log('dropdown state changed from', prev, 'to', newVal);
+      return newVal;
+    });
+  };
+
+  const handleApprove = (id: number) => {
+    console.log('handleApprove called with id:', id);
+    setCurrentActionId(id);
+    setShowApproveModal(true);
+    setOpenDropdownId(null);
+  };
+
+  const handleReject = (id: number) => {
+    console.log('handleReject called with id:', id);
+    setCurrentActionId(id);
+    setShowRejectModal(true);
+    setRejectionReason('');
+    setOpenDropdownId(null);
+  };
+
+  const confirmApprove = async () => {
+    if (!currentActionId) {
+      console.warn('No KYC ID selected for approval');
+      return;
+    }
+    
+    console.log('Starting approval process for KYC ID:', currentActionId);
+    setActionLoading(true);
+    
+    try {
+      console.log('Dispatching approveAdminAllKyc thunk...');
+      const action: any = await dispatch(approveAdminAllKyc(currentActionId));
+      
+      console.log('Thunk action:', action);
+      console.log('Action type:', action.type);
+      console.log('Action payload:', action.payload);
+      
+      if (action.type && action.type.endsWith('/fulfilled')) {
+        console.log('Approval successful!');
+        setShowApproveModal(false);
+        dispatch(fetchAdminAllKyc({ page: currentPage }));
+        showAlert('KYC approved successfully', 'success');
+      } else {
+        console.error('Approval failed - not fulfilled');
+        const msg = (action.payload as any) || (action.error && action.error.message) || 'Failed to approve KYC';
+        showAlert(msg, 'error');
+      }
+    } catch (err) {
+      console.error('Approve error caught:', err);
+      showAlert('Failed to approve KYC. See console for details.', 'error');
+    } finally {
+      setActionLoading(false);
+      setCurrentActionId(null);
+    }
+  };
+
+  const confirmReject = async () => {
+    if (!currentActionId) {
+      console.warn('No KYC ID selected for rejection');
+      return;
+    }
+    
+    if (!rejectionReason.trim()) {
+      showAlert('Please provide a rejection reason', 'warning');
+      return;
+    }
+    
+    console.log('Starting rejection process for KYC ID:', currentActionId);
+    setActionLoading(true);
+    
+    try {
+      console.log('Dispatching rejectAdminAllKyc thunk with reason:', rejectionReason);
+      const action: any = await dispatch(rejectAdminAllKyc({ id: currentActionId, rejection_reason: rejectionReason.trim() }));
+      
+      console.log('Thunk action:', action);
+      console.log('Action type:', action.type);
+      console.log('Action payload:', action.payload);
+      
+      if (action.type && action.type.endsWith('/fulfilled')) {
+        console.log('Rejection successful!');
+        setShowRejectModal(false);
+        setRejectionReason('');
+        dispatch(fetchAdminAllKyc({ page: currentPage }));
+        showAlert('KYC rejected successfully', 'success');
+      } else {
+        console.error('Rejection failed - not fulfilled');
+        const msg = (action.payload as any) || (action.error && action.error.message) || 'Failed to reject KYC';
+        showAlert(msg, 'error');
+      }
+    } catch (err) {
+      console.error('Reject error caught:', err);
+      showAlert('Failed to reject KYC. See console for details.', 'error');
+    } finally {
+      setActionLoading(false);
+      setCurrentActionId(null);
+    }
+  };
+
+  const ImageCell: React.FC<{ src: string; alt: string }> = ({ src, alt }) => {
+    if (!src) {
+      return (
+        <div className="h-16 w-24 bg-gray-100 dark:bg-gray-700 rounded border border-gray-300 dark:border-gray-600 flex items-center justify-center">
+          <span className="text-xs text-gray-500 dark:text-gray-400 text-center px-2">No image</span>
+        </div>
+      );
+    }
+    return (
+      <img
+        src={src}
+        alt={alt}
+        className="h-16 w-24 object-cover rounded border cursor-pointer hover:opacity-80 transition"
+        onClick={() => setSelectedImage({ src, alt })}
+      />
+    );
+  };
+
+  const SelfieCell: React.FC<{ src: string; alt: string }> = ({ src, alt }) => {
+    if (!src) {
+      return (
+        <div className="h-16 w-16 bg-gray-100 dark:bg-gray-700 rounded-full border border-gray-300 dark:border-gray-600 flex items-center justify-center">
+          <span className="text-xs text-gray-500 dark:text-gray-400 text-center px-2">No image</span>
+        </div>
+      );
+    }
+    return (
+      <img
+        src={src}
+        alt={alt}
+        className="h-16 w-16 object-cover rounded-full border cursor-pointer hover:opacity-80 transition"
+        onClick={() => setSelectedImage({ src, alt })}
+      />
+    );
+  };
+
+  const MobileImageCard: React.FC<{ src: string; alt: string; label: string }> = ({ src, alt, label }) => {
+    if (!src) {
+      return (
+        <div className="text-center">
+          <p className="text-xs text-gray-500 mb-1">{label}</p>
+          <div className="w-full h-28 bg-gray-100 dark:bg-gray-700 rounded border border-gray-300 dark:border-gray-600 flex items-center justify-center">
+            <span className="text-xs text-gray-500 dark:text-gray-400">No image</span>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div className="text-center">
+        <p className="text-xs text-gray-500 mb-1">{label}</p>
+        <img
+          src={src}
+          alt={alt}
+          className="w-full h-28 object-cover rounded border cursor-pointer"
+          onClick={() => setSelectedImage({ src, alt })}
+        />
+      </div>
+    );
   };
 
   const ActionDropdown = ({ kyc }: { kyc: (typeof filteredData)[0] }) => (
-    <div className="relative inline-block text-left" ref={dropdownRef}>
+    <div className="relative inline-block text-left">
       <button
+        data-dropdown-trigger
         onClick={(e) => {
           e.stopPropagation();
           toggleDropdown(kyc.id);
@@ -125,21 +297,23 @@ const KYCReviewQueue: React.FC = () => {
       </button>
 
       {openDropdownId === String(kyc.id) && (
-        <div className="absolute right-0 mt-2 w-48 origin-top-right bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50">
+        <div data-dropdown-menu className="absolute right-0 mt-2 w-48 origin-top-right bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50">
           <div className="py-1">
             <button
-              onClick={() => {
-                alert(`Approve KYC for ${kyc.userName}`);
-                setOpenDropdownId(null);
+              onClick={(e) => {
+                e.stopPropagation();
+                console.log('Approve button clicked, calling handleApprove');
+                handleApprove(kyc.id);
               }}
               className="w-full text-left px-4 py-2.5 text-sm text-green-600 hover:bg-gray-100 dark:hover:bg-gray-700"
             >
               Approve
             </button>
             <button
-              onClick={() => {
-                alert(`Reject KYC for ${kyc.userName}`);
-                setOpenDropdownId(null);
+              onClick={(e) => {
+                e.stopPropagation();
+                console.log('Reject button clicked, calling handleReject');
+                handleReject(kyc.id);
               }}
               className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700"
             >
@@ -223,28 +397,13 @@ const KYCReviewQueue: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{kyc.documentType}</td>
                   <td className="px-6 py-4 text-center">
-                    <img
-                      src={kyc.idFront}
-                      alt="ID Front"
-                      className="h-16 w-24 object-cover rounded border cursor-pointer hover:opacity-80 transition"
-                      onClick={() => setSelectedImage({ src: kyc.idFront, alt: 'ID Front' })}
-                    />
+                    <ImageCell src={kyc.idFront} alt="ID Front" />
                   </td>
                   <td className="px-6 py-4 text-center">
-                    <img
-                      src={kyc.idBack}
-                      alt="ID Back"
-                      className="h-16 w-24 object-cover rounded border cursor-pointer hover:opacity-80 transition"
-                      onClick={() => setSelectedImage({ src: kyc.idBack, alt: 'ID Back' })}
-                    />
+                    <ImageCell src={kyc.idBack} alt="ID Back" />
                   </td>
                   <td className="px-6 py-4 text-center">
-                    <img
-                      src={kyc.selfie}
-                      alt="Selfie"
-                      className="h-16 w-16 object-cover rounded-full border cursor-pointer hover:opacity-80 transition"
-                      onClick={() => setSelectedImage({ src: kyc.selfie, alt: 'Selfie' })}
-                    />
+                    <SelfieCell src={kyc.selfie} alt="Selfie" />
                   </td>
                   <td className="px-6 py-4"><StatusBadge status={kyc.status} /></td>
                   <td className="px-6 py-4 text-right">
@@ -311,33 +470,9 @@ const KYCReviewQueue: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-3 gap-4 mb-4">
-              <div className="text-center">
-                <p className="text-xs text-gray-500 mb-1">ID Front</p>
-                <img
-                  src={kyc.idFront}
-                  alt="ID Front"
-                  className="w-full h-28 object-cover rounded border cursor-pointer"
-                  onClick={() => setSelectedImage({ src: kyc.idFront, alt: 'ID Front' })}
-                />
-              </div>
-              <div className="text-center">
-                <p className="text-xs text-gray-500 mb-1">ID Back</p>
-                <img
-                  src={kyc.idBack}
-                  alt="ID Back"
-                  className="w-full h-28 object-cover rounded border cursor-pointer"
-                  onClick={() => setSelectedImage({ src: kyc.idBack, alt: 'ID Back' })}
-                />
-              </div>
-              <div className="text-center">
-                <p className="text-xs text-gray-500 mb-1">Selfie</p>
-                <img
-                  src={kyc.selfie}
-                  alt="Selfie"
-                  className="w-full h-28 object-cover rounded-full border cursor-pointer"
-                  onClick={() => setSelectedImage({ src: kyc.selfie, alt: 'Selfie' })}
-                />
-              </div>
+              <MobileImageCard src={kyc.idFront} alt="ID Front" label="ID Front" />
+              <MobileImageCard src={kyc.idBack} alt="ID Back" label="ID Back" />
+              <MobileImageCard src={kyc.selfie} alt="Selfie" label="Selfie" />
             </div>
 
             <div className="text-sm text-gray-600 dark:text-gray-300">
@@ -378,6 +513,76 @@ const KYCReviewQueue: React.FC = () => {
           alt={selectedImage.alt}
           onClose={() => setSelectedImage(null)}
         />
+      )}
+
+      {/* Approve Confirmation Modal */}
+      {showApproveModal && (
+        <div className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-black/60">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl p-6 w-full max-w-md">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Approve KYC</h3>
+            <p className="text-gray-600 dark:text-gray-300 mb-6">
+              Are you sure you want to approve this KYC request?
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowApproveModal(false);
+                  setCurrentActionId(null);
+                }}
+                disabled={actionLoading}
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 dark:text-gray-300"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmApprove}
+                disabled={actionLoading}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 disabled:opacity-50"
+              >
+                {actionLoading ? 'Processing...' : 'Approve'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reject Confirmation Modal */}
+      {showRejectModal && (
+        <div className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-black/60">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl p-6 w-full max-w-md">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Reject KYC</h3>
+            <p className="text-gray-600 dark:text-gray-300 mb-4">
+              Please provide a reason for rejection:
+            </p>
+            <textarea
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              placeholder="Enter rejection reason..."
+              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white mb-4 focus:outline-none focus:ring-2 focus:ring-red-500"
+              rows={4}
+            />
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowRejectModal(false);
+                  setRejectionReason('');
+                  setCurrentActionId(null);
+                }}
+                disabled={actionLoading}
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 dark:text-gray-300"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmReject}
+                disabled={actionLoading || !rejectionReason.trim()}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 disabled:opacity-50"
+              >
+                {actionLoading ? 'Processing...' : 'Confirm Reject'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

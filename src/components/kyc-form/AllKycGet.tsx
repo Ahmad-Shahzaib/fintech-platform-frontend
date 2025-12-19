@@ -172,8 +172,15 @@ const AllKycGet: React.FC = () => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900 dark:text-gray-300">{item.user?.email}</div>
                       </td>
+                      {/* Document Type Column */}
+                      {/* Displays the KYC document type (drivers_license, passport, national_id, etc.) */}
+                      {/* For drivers_license: Shows "drivers_license" formatted with underscores as-is */}
+                      {/* Document types with back side support (passport): Only shows front verification */}
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">{item.document_type}</span>
+                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                          {/* Format: Convert underscores to spaces for display (drivers_license → drivers license) */}
+                          {(item.document_type || '').replace(/_/g, ' ').toUpperCase()}
+                        </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${item.status === 'approved' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : item.status === 'rejected' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'}`}>
@@ -317,7 +324,16 @@ const AllKycGet: React.FC = () => {
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <div className="text-sm text-gray-500 dark:text-gray-400">Document Type</div>
-                      <div className="mt-1 uppercase font-medium">{(detail?.document_type || '').replace('_', ' ')}</div>
+                      {/* 
+                        Document Type Display Documentation:
+                        - Supported types: passport, drivers_license, national_id, etc.
+                        - drivers_license: Shows both front and back of driver's license
+                        - passport: Shows only front (passports don't have back side)
+                        - national_id: Shows both front and back
+                        - Format: Converts underscores to spaces and displays in uppercase
+                        Example: drivers_license → DRIVERS LICENSE
+                      */}
+                      <div className="mt-1 uppercase font-medium">{(detail?.document_type || '').replace(/_/g, ' ')}</div>
                     </div>
                     <div>
                       <div className="text-sm text-gray-500 dark:text-gray-400">Document No</div>
@@ -348,6 +364,12 @@ const AllKycGet: React.FC = () => {
                   )}
 
                   {/* Back */}
+                  {/* 
+                    Back Side Document Display:
+                    - Shows for: drivers_license, national_id, bank_cards, etc.
+                    - Hidden for: passport (one-sided document)
+                    - drivers_license must have back side for complete verification
+                  */}
                   {detail?.document_back_url && !detail?.document_type?.toLowerCase().includes('passport') ? (
                     <div>
                       <p className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-2">Back Side</p>
