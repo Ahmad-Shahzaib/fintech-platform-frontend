@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { fetchRepayments } from '@/redux/thunk/repaymentsThunks';
+import { fetchRepayments, RepaymentItem } from '@/redux/thunk/repaymentsThunks';
 
 interface Pagination {
     total: number;
@@ -11,7 +11,7 @@ interface Pagination {
 }
 
 interface RepaymentsState {
-    items: any[];
+    items: RepaymentItem[];
     pagination: Pagination | null;
     loading: boolean;
     error: string | null;

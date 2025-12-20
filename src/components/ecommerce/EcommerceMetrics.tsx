@@ -128,7 +128,7 @@ export const EcommerceMetrics = ({ kycStatus, isAdmin }: { kycStatus?: string | 
 
   // Calculate total repayments amount
   const totalRepaymentsAmount = repayments.items.reduce((sum, item) => {
-    const amount = parseFloat(item.repayment_amount_aud || item.amount_aud || '0');
+    const amount = parseFloat(item.top_up_request?.repayment_amount_aud || '0');
     return sum + (isNaN(amount) ? 0 : amount);
   }, 0);
 
