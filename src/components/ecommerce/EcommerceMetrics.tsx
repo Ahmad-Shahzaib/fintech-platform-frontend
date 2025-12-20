@@ -5,6 +5,9 @@ import { ArrowUpIcon, ArrowDownIcon } from "@/icons"; // Assuming you have these
 import { useAuth } from "@/context/AuthContext";
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { fetchAdminStats } from '@/redux/slice/adminStatsSlice';
+import { fetchUserTopUps } from '@/redux/thunk/userTopUpsThunks';
+import { fetchRepayments } from '@/redux/thunk/repaymentsThunks';
+import { fetchOutstandingBalance } from '@/redux/thunk/outstandingBalanceThunks';
 import { UserRole } from "@/types/auth";
 
 // Simple badge component (you can replace with your existing Badge if preferred)
@@ -114,27 +117,49 @@ export const EcommerceMetrics = ({ kycStatus, isAdmin }: { kycStatus?: string | 
   // fetch admin stats when admin view
   const dispatch = useAppDispatch();
   const adminStats = useAppSelector((s) => s.adminStats);
+  const userTopUps = useAppSelector((s) => s.userTopUps);
+  const repayments = useAppSelector((s) => s.repayments);
+  const outstandingBalance = useAppSelector((s) => s.outstandingBalance);
+
+  // Calculate total top-ups amount
+  const totalTopUpAmount = userTopUps.items.reduce((sum, item) => {
+    return sum + parseFloat(item.amount_aud || '0');
+  }, 0);
+
+  // Calculate total repayments amount
+  const totalRepaymentsAmount = repayments.items.reduce((sum, item) => {
+    const amount = parseFloat(item.repayment_amount_aud || item.amount_aud || '0');
+    return sum + (isNaN(amount) ? 0 : amount);
+  }, 0);
+
+  // Get outstanding balance
+  const outstandingAmount = outstandingBalance.data?.total_outstanding ?? 0;
 
   useEffect(() => {
     if (resolvedIsAdmin) {
       dispatch(fetchAdminStats());
+    } else {
+      // Fetch user top-ups and repayments for non-admin users
+      dispatch(fetchUserTopUps({}));
+      dispatch(fetchRepayments({ page: 1, per_page: 1000 }));
+      dispatch(fetchOutstandingBalance());
     }
   }, [resolvedIsAdmin, dispatch]);
 
   const userCards = [
     {
       name: "Total Topup Amount",
-      price: "$1,232.00",
+      price: `$${totalTopUpAmount.toFixed(2)}`,
       change: 11.01,
     },
     {
       name: "Total Repayments",
-      price: "$965.00",
+      price: `$${totalRepaymentsAmount.toFixed(2)}`,
       change: -9.05,
     },
     {
-      name: "Topup Requests",
-      price: "$1,232.00",
+      name: "Total Outstanding",
+      price: `$${outstandingAmount.toFixed(2)}`,
       change: 11.01,
     },
     {

@@ -34,6 +34,9 @@ import transactionsReducer from './slice/transactionsSlice';
 import usersListReducer from './slice/usersListSlice';
 import financialSummaryReducer from './slice/financialSummarySlice';
 import paymentsListReducer from './slice/paymentsListSlice';
+import outstandingBalanceReducer from './slice/outstandingBalanceSlice';
+import repaymentsReducer from './slice/repaymentsSlice';
+import userTopUpsReducer from './slice/userTopUpsSlice';
 
 // New reducer
 
@@ -72,6 +75,9 @@ const rootReducer = combineReducers({
   usersList: usersListReducer,
   financialSummary: financialSummaryReducer,
   paymentsList: paymentsListReducer,
+  outstandingBalance: outstandingBalanceReducer,
+  repayments: repaymentsReducer,
+  userTopUps: userTopUpsReducer,
   
 
 
