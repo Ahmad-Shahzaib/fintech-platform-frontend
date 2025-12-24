@@ -1,13 +1,12 @@
 import React from 'react'
 import TicketsTable from '@/components/tickets/TicketsTable'
 
-const page = () => {
+const TicketsPage = () => {
   return (
     <div>
-      {/* <SupportPage/> */}
       <TicketsTable />
     </div>
   )
 }
 
-export default page
+export default TicketsPage

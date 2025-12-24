@@ -103,6 +103,15 @@ const navItems: NavItem[] = [
         { name: " ALL USERS", path: "/user-activity-report", pro: false },
       ]
   },
+  {
+    name: "Help & Support",
+    icon: <PlugInIcon />,
+    subItems:
+      [
+        { name: "Support Tickets", path: "/support-tickets", pro: false },
+      ]
+
+  },
 
   {
     name: "Settings",

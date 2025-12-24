@@ -37,8 +37,12 @@ import paymentsListReducer from './slice/paymentsListSlice';
 import outstandingBalanceReducer from './slice/outstandingBalanceSlice';
 import repaymentsReducer from './slice/repaymentsSlice';
 import userTopUpsReducer from './slice/userTopUpsSlice';
-
-// New reducer
+import ticketsReducer from './slice/ticketsSlice';
+import submitTicketReducer from './slice/submitTicketSlice';
+import ticketMessagesReducer from './slice/ticketMessagesSlice';
+import adminTicketsReducer from './slice/adminTicketsSlice';
+import updateTicketStatusReducer from './slice/updateTicketStatusSlice';
+import sendTicketMessageReducer from './slice/sendTicketMessageSlice';
 
 const rootReducer = combineReducers({
   auth: authReducer,
@@ -78,11 +82,12 @@ const rootReducer = combineReducers({
   outstandingBalance: outstandingBalanceReducer,
   repayments: repaymentsReducer,
   userTopUps: userTopUpsReducer,
-  
-
-
-
-
+  tickets: ticketsReducer,
+  submitTicket: submitTicketReducer,
+  ticketMessages: ticketMessagesReducer,
+  adminTickets: adminTicketsReducer,
+  updateTicketStatus: updateTicketStatusReducer,
+  sendTicketMessage: sendTicketMessageReducer,
   // Add other reducers here
 });
 
