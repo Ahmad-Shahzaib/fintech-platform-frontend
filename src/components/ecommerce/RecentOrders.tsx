@@ -5,6 +5,7 @@ import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { fetchTopUps } from '@/redux/thunk/topUpsThunks';
 import { fetchAdminLatestTopUps } from '@/redux/thunk/adminLatestTopUpsThunks';
 import { X, ExternalLink, Copy, Check } from 'lucide-react';
+import Link from 'next/link';
 
 type TopUp = {
   id: string;
@@ -26,8 +27,9 @@ const RecentOrders = ({ admin = false }: Props) => {
   const [selectedTopUp, setSelectedTopUp] = useState<TopUp | null>(null);
   const dispatch = useAppDispatch();
   const [page, setPage] = useState<number>(1);
-  // Request all user top-ups by default (empty status) so they show after refresh
-  const status = '';
+  // Filters
+  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>('');
 
   // Read top-ups from redux store (server)
   const topUpsItems = useAppSelector((s) => (admin ? s.adminLatestTopUps?.items ?? [] : s.topUps?.items ?? []));
@@ -44,7 +46,7 @@ const RecentOrders = ({ admin = false }: Props) => {
       // dispatching here ensures the component has data if layout didn't fetch
       dispatch(fetchAdminLatestTopUps());
     } else {
-      dispatch(fetchTopUps({ status, page }));
+      dispatch(fetchTopUps({ status: statusFilter, payment_status: paymentStatusFilter, page }));
     }
 
     const onAdded = (e: Event) => {
@@ -52,13 +54,13 @@ const RecentOrders = ({ admin = false }: Props) => {
       if (admin) {
         dispatch(fetchAdminLatestTopUps());
       } else {
-        dispatch(fetchTopUps({ status, page }));
+        dispatch(fetchTopUps({ status: statusFilter, payment_status: paymentStatusFilter, page }));
       }
     };
 
     window.addEventListener('topup:added', onAdded as EventListener);
     return () => window.removeEventListener('topup:added', onAdded as EventListener);
-  }, [dispatch, page, admin]);
+  }, [dispatch, page, admin, statusFilter, paymentStatusFilter]);
 
   // Copy helpers
   const copyToClipboard = async (text: string, onCopied: (v: boolean) => void) => {
@@ -97,7 +99,7 @@ const RecentOrders = ({ admin = false }: Props) => {
     if (!pagination) return;
     const to = Math.max(1, Math.min(p, pagination.last_page));
     setPage(to);
-    dispatch(fetchTopUps({ status, page: to }));
+    dispatch(fetchTopUps({ status: statusFilter, payment_status: paymentStatusFilter, page: to }));
   };
 
   const getStatusBadge = (status: string) => {
@@ -127,12 +129,93 @@ const RecentOrders = ({ admin = false }: Props) => {
     }
   };
 
+  const formatPaymentStatus = (status: string | null | undefined) => {
+    if (!status) return 'Unknown';
+    const s = String(status).replace(/_/g, ' ').toLowerCase();
+    const map: Record<string, string> = {
+      paid: 'Paid',
+      completed: 'Paid',
+      pending: 'Pending',
+      processing: 'Processing',
+      failed: 'Failed',
+      rejected: 'Rejected',
+      unpaid: 'Unpaid'
+    };
+    if (map[s]) return map[s];
+    return s
+      .split(' ')
+      .map((w) => (w ? w.charAt(0).toUpperCase() + w.slice(1) : w))
+      .join(' ');
+  };
+
+  const getPaymentStatusBadge = (status: string | null | undefined, id?: string) => {
+    const s = (status || '').toLowerCase();
+    const styles: Record<string, string> = {
+      awaiting_payment: 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900 dark:text-yellow-200 dark:border-yellow-700',
+      payment_pending: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900 dark:text-blue-200 dark:border-blue-700',
+      payment_verified: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900 dark:text-green-200 dark:border-green-700',
+      payment_failed: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900 dark:text-red-200 dark:border-red-700',
+    };
+
+    return (
+      <div className="flex items-center gap-2">
+        <span className={`px-3 py-1 rounded-full text-xs font-medium border ${styles[s] || 'bg-gray-100 text-gray-800 border-gray-200'}`}>
+          {formatPaymentStatus(status)}
+        </span>
+     
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{admin ? 'Recent TopUps' : 'My Recent TopUps'}</h1>
           <p className="text-gray-600 dark:text-gray-300 mt-1">View and manage your cryptocurrency top-up requests</p>
+
+          {/* Filters: Both on the right side */}
+          <div className="mt-6 flex items-center justify-end gap-8">
+            {/* Payment Status Filter */}
+            <div className="flex items-center gap-3">
+              <label className="text-sm font-medium text-gray-600 dark:text-gray-300">Payment Status</label>
+              <select
+                value={paymentStatusFilter}
+                onChange={(e) => {
+                  setPaymentStatusFilter(e.target.value);
+                  setPage(1);
+                  dispatch(fetchTopUps({ status: statusFilter, payment_status: e.target.value, page: 1 }));
+                }}
+                className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm font-medium text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
+              >
+                <option value="">All Payment Statuses</option>
+                <option value="awaiting_payment">Awaiting Payment</option>
+                <option value="payment_pending">Payment Pending</option>
+                <option value="payment_verified">Payment Verified</option>
+                <option value="payment_failed">Payment Failed</option>
+              </select>
+            </div>
+
+            {/* Status Filter */}
+            <div className="flex items-center gap-3">
+              <label className="text-sm font-medium text-gray-600 dark:text-gray-300">Status</label>
+              <select
+                value={statusFilter}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value);
+                  setPage(1);
+                  dispatch(fetchTopUps({ status: e.target.value, payment_status: paymentStatusFilter, page: 1 }));
+                }}
+                className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm font-medium text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
+              >
+                <option value="">All Statuses</option>
+                <option value="pending">Pending</option>
+                <option value="processing">Processing</option>
+                <option value="completed">Completed</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
+          </div>
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
@@ -145,11 +228,18 @@ const RecentOrders = ({ admin = false }: Props) => {
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Amount (AUD)</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Coin/Token</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Network</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">PAYMENT STATUS</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                {(topUpsItems || []).map((raw: any) => {
+                {((topUpsItems || []).filter((raw: any) => {
+                  const rawStatus = String(raw.status ?? raw.status ?? '').toLowerCase();
+                  const rawPayment = String(raw.payment_status ?? raw.paymentStatus ?? '').toLowerCase();
+                  if (statusFilter && statusFilter !== '' && rawStatus !== statusFilter.toLowerCase()) return false;
+                  if (paymentStatusFilter && paymentStatusFilter !== '' && rawPayment !== paymentStatusFilter.toLowerCase()) return false;
+                  return true;
+                })).map((raw: any) => {
                   // normalize server item to local TopUp type
                   const coinVal = (raw.currency && typeof raw.currency === 'object')
                     ? (raw.currency.code || raw.currency.name || '')
@@ -177,6 +267,7 @@ const RecentOrders = ({ admin = false }: Props) => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-gray-100">${topUp.amount.toLocaleString()}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{topUp.coin}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{topUp.network}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{getPaymentStatusBadge(raw.payment_status ?? raw.paymentStatus, topUp.id)}</td>
                       <td className="px-6 py-4 whitespace-nowrap">{getStatusBadge(topUp.status)}</td>
                     </tr>
                   );
@@ -209,7 +300,7 @@ const RecentOrders = ({ admin = false }: Props) => {
         // Ensure the slide-over sits above the header which uses a high z-index
         <div className="fixed inset-0 z-[100000] flex">
           {/* backdrop */}
-          <div className="fixed inset-0 z-40" onClick={() => setSelectedTopUp(null)} />
+          <div className="fixed inset-0 z-40 bg-black/50" onClick={() => setSelectedTopUp(null)} />
 
           {/* slide over */}
           <section

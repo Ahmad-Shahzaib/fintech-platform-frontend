@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, ChangeEvent, FormEvent } from 'react';
+import { useRouter } from 'next/navigation';
 import { AxiosError } from 'axios';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { createTopUpRequest } from '@/redux/thunk/topUpThunks';
@@ -45,6 +46,7 @@ export default function TopUpRequest() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const dispatch = useAppDispatch();
   const { showAlert } = useAlert();
+  const router = useRouter();
 
   const currencies = useAppSelector((s) => s.currencies?.items ?? []);
 
@@ -192,6 +194,12 @@ export default function TopUpRequest() {
         setFormData({ ...formData, amount: '', walletAddress: '', confirmAddress: '', acceptDisclaimer: false });
         setFees({ networkFee: 0, exchangeFee: 0, cryptoAmount: 0, totalReceive: 0 });
         setErrors({});
+        // navigate to create-payment page after successful top-up
+        try {
+          router.push('/create-payment');
+        } catch (e) {
+          // ignore navigation errors in non-next environments
+        }
         // alert('Top-up request submitted successfully!');
       } else {
         // rejected
@@ -444,9 +452,14 @@ export default function TopUpRequest() {
                 <div className="text-xs text-red-700 dark:text-red-200">
                   <p className="font-semibold mb-1">Triple-check before submitting:</p>
                   <ul className="space-y-0.5 ml-4 list-disc">
-                    <li>Wallet address is correct</li>
-                    <li>Network matches your wallet</li>
-                    <li>You have selected the right coin</li>
+                    <li>✅
+                      I must complete payment within 24 hours</li>
+                    <li>
+                      ✅Crypto will be sent only after payment is verified</li>
+                    <li>
+                      ✅Crypto transactions are irreversible</li>
+                      <li>
+                      ✅I'm responsible for correct wallet address</li>
                   </ul>
                 </div>
               </div>

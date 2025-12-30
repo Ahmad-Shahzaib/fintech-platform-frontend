@@ -312,6 +312,10 @@ const PaymentHistoryPage = () => {
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Status
                   </th>
+                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    RECEIPT
+                  </th>
+                  
                   <th scope="col" className="px-6 py-4 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Actions
                   </th>
@@ -327,7 +331,7 @@ const PaymentHistoryPage = () => {
                 ) : filteredPayments.length > 0 ? (
                   paginatedPayments.map((payment: any) => (
                     <tr key={payment.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
+                      <td className="px-3 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
                         {payment.id}
                       </td>
 
@@ -338,18 +342,46 @@ const PaymentHistoryPage = () => {
                         ${payment.amount.toFixed(2)}
                       </td>
 
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                      <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
                         {formatMethod(payment.method)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                        {payment.bankName || '—'}
+                      <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                        {payment.bankName || 'No bank info'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                        {payment.date ? formatDate(payment.date) : '—'}
+                      <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                        {payment.date ? formatDate(payment.date) : 'No date'}
                       </td>
+                      {/* receipt */}
+                     
+
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         <StatusBadge status={payment.status} />
                       </td>
+                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                        {payment.raw?.receipt_path ? (
+                          <a
+                            className="text-blue-600 hover:underline"
+                            href={
+                              payment.raw.receipt_path.startsWith('http')
+
+                                ? payment.raw.receipt_path
+                                : (() => {
+                                  const raw = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'https://fintechapi.softsuitetech.com/api';
+                                  // Remove a trailing /api if present so storage URL points to the public files host
+                                  const storageBase = raw.replace(/\/api\/?$/, '').replace(/\/+$/, '');
+                                  return `${storageBase}/storage/${payment.raw.receipt_path}`;
+                                })()
+                            }
+                            target="_blank" 
+                            rel="noreferrer"
+                          >
+                            View Receipt
+                          </a>
+                        ) : (
+                          'no receipt'
+                        )}
+                      </td>
+
                       <td className="pr-8 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <button
                           onClick={() => openDetails(payment)}

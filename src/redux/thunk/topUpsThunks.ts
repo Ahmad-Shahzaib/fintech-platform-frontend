@@ -4,6 +4,7 @@ import axios from 'axios';
 
 export interface TopUpsQuery {
     status?: string;
+    payment_status?: string;
     page?: number;
 }
 
@@ -13,6 +14,7 @@ export const fetchTopUps = createAsyncThunk(
         try {
             const query = new URLSearchParams();
             if (params.status) query.set('status', params.status);
+            if (params.payment_status) query.set('payment_status', params.payment_status);
             if (params.page) query.set('page', String(params.page));
 
             const response = await api.get(`/topup/my-requests?${query.toString()}`);

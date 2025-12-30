@@ -53,10 +53,15 @@ export default function PaymentConfirmationPage() {
     // Aggregate client-side validation for required fields
     const missing: string[] = [];
     if (!topupId || String(topupId).trim() === '') missing.push('Top-up request ID');
-    if (!amountPaid || String(amountPaid).trim() === '') missing.push('Payment amount');
     if (!paymentMethod || String(paymentMethod).trim() === '') missing.push('Payment method');
     if (!referenceNumber || String(referenceNumber).trim() === '') missing.push('Reference number');
     if (!selectedFile) missing.push('Receipt / proof of payment');
+
+    // determine selected top-up (if any) and the amount we'll submit
+    const matchedTopUp = (topUpsState?.items || []).find((it: any) => String(it.id) === String(topupId) || String(it.transaction_id ?? '') === String(topupId));
+    const topUpAmountRaw = matchedTopUp ? (matchedTopUp.total_aud ?? matchedTopUp.amount_aud ?? matchedTopUp.amount) : null;
+    const submitAmountRaw = topUpAmountRaw ?? amountPaid;
+    if (!submitAmountRaw || String(submitAmountRaw).trim() === '') missing.push('Payment amount');
 
     const selectedMethodObj = paymentMethodsState?.methods?.find((m: any) => String(m.id) === String(paymentMethod));
     const methodName = String(selectedMethodObj?.name || '').toLowerCase();
@@ -68,23 +73,23 @@ export default function PaymentConfirmationPage() {
       return;
     }
 
-    // Validate that amount paid does not exceed the selected top-up amount
-    const selectedTopUp = completedTopUps.find((t: any) => String(t.id) === String(topupId));
-    const maxAmount = selectedTopUp?.amount_aud ?? selectedTopUp?.total_aud ?? 0;
-    const paidAmount = parseFloat(String(amountPaid));
-    if (paidAmount > maxAmount) {
-      showAlert(`Payment amount cannot exceed $${maxAmount.toFixed(2)} (the selected top-up amount).`, 'error');
-      return;
-    }
+    // Determine selected top-up and max amount (no upper-limit validation enforced)
+    const selectedTopUp = activeTopUps.find((t: any) => String(t.id) === String(topupId));
+    const maxAmount = selectedTopUp ? (parseFloat(String(selectedTopUp.total_aud ?? selectedTopUp.amount_aud ?? selectedTopUp.amount ?? 0)) || 0) : 0;
+    const paidAmount = parseFloat(String(submitAmountRaw));
 
     // Resolve topup identifier: if user provided a transaction id, map to internal id
     let submitTopupId = topupId;
-    const matched = (topUpsState?.items || []).find((it: any) => String(it.id) === String(topupId) || String(it.transaction_id ?? '') === String(topupId));
-    if (matched) submitTopupId = String(matched.id);
+    if (matchedTopUp) submitTopupId = String(matchedTopUp.id);
 
     const formData = new FormData();
     formData.append('top_up_request_id', submitTopupId);
-    formData.append('amount_paid_aud', amountPaid);
+    // prefer sending the top-up's `total_aud` if available
+    const submitAmount = (() => {
+      const n = parseFloat(String(submitAmountRaw ?? ''));
+      return Number.isFinite(n) ? n.toFixed(2) : String(submitAmountRaw ?? '');
+    })();
+    formData.append('amount_paid_aud', submitAmount);
     formData.append('payment_method', paymentMethod);
     formData.append('reference_number', referenceNumber);
     formData.append('payment_notes', paymentNotes);
@@ -197,29 +202,47 @@ export default function PaymentConfirmationPage() {
     }
   }, [paymentMethod, paymentMethodsState.methods, dispatch]);
 
-  // Ensure we have the user's completed top-ups available for the dropdown
+  // Ensure we have the user's pending (active) top-ups available for the dropdown
   useEffect(() => {
-    // request completed top-ups from server (status filter)
-    dispatch(fetchTopUps({ status: 'completed', page: 1 }));
+    // request pending (active) top-ups from server (status filter)
+    dispatch(fetchTopUps({ status: 'pending', page: 1,  }));
   }, [dispatch]);
 
-  // derive list of completed top-ups from redux state
-  const completedTopUps = (topUpsState?.items || []).filter((t: any) => String(t?.status || '').toLowerCase() === 'completed');
+  // derive list of active/pending top-ups from redux state
+  // Only include top-ups that are pending AND have not had a payment proof submitted/verified.
+  // Exclude payment_status values that indicate a proof was submitted: 'payment_pending' and 'payment_verified'.
+  const activeTopUps = (topUpsState?.items || []).filter((t: any) => {
+    const status = String(t?.status || '').toLowerCase();
+    const paymentStatus = String(t?.payment_status ?? t?.paymentStatus ?? '').toLowerCase();
+    if (status !== 'pending') return false;
+    if (paymentStatus === 'payment_pending' || paymentStatus === 'payment_verified') return false;
+    return true;
+  });
 
   // currently selected top-up object and its numeric min/max (AUD)
-  const selectedTopUp = completedTopUps.find((t: any) => String(t.id) === String(topupId));
+  const selectedTopUp = activeTopUps.find((t: any) => String(t.id) === String(topupId));
   const maxAmount = parseFloat(String(selectedTopUp?.amount_aud ?? selectedTopUp?.total_aud ?? selectedTopUp?.amount ?? 0)) || 0;
   // use explicit min if provided on the top-up, otherwise default to 0.01
   const minAmount = parseFloat(String(selectedTopUp?.min_amount_aud ?? selectedTopUp?.min_amount ?? 0.01)) || 0.01;
 
   // If there are top-ups but none are completed, clear any entered topupId
   useEffect(() => {
-    if (topUpsState?.items && topUpsState.items.length > 0 && completedTopUps.length === 0) {
+    if (topUpsState?.items && topUpsState.items.length > 0 && activeTopUps.length === 0) {
       setTopupId('');
     }
     // intentionally only depend on items and completed count
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [topUpsState?.items, completedTopUps.length]);
+  }, [topUpsState?.items, activeTopUps.length]);
+
+  // Prefill amountPaid with selected top-up total when selected and input empty
+  useEffect(() => {
+    if (!selectedTopUp) return;
+    if (amountPaid && String(amountPaid).trim() !== '') return;
+    const amt = selectedTopUp.total_aud ?? selectedTopUp.amount_aud ?? selectedTopUp.amount ?? '';
+    const n = parseFloat(String(amt));
+    setAmountPaid(!isNaN(n) ? String(n.toFixed(2)) : String(amt));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTopUp]);
 
   return (
     <div className="min-h-screen dark:bg-gray-900 flex items-center justify-center p-4">
@@ -240,26 +263,27 @@ export default function PaymentConfirmationPage() {
                   My Active Top-ups<span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
-                  {/* Always show a dropdown for active top-ups. If there are no completed top-ups (or none yet), show a disabled select with a helpful message. */}
+                  {/* Always show a dropdown for active top-ups. If there are no active top-ups (or none yet), show a disabled select with a helpful message. */}
                   <select
                     value={topupId}
                     onChange={(e) => {
                       const val = e.target.value;
                       setTopupId(val);
-                      const sel = completedTopUps.find((it: any) => String(it.id) === val || String(it.transaction_id ?? '') === val);
+                      const sel = activeTopUps.find((it: any) => String(it.id) === val || String(it.transaction_id ?? '') === val);
                       if (sel) {
-                        const amt = sel.amount_aud ?? sel.total_aud ?? sel.amount ?? '';
+                        // prefer total_aud when pre-filling the Amount Paid input
+                        const amt = sel.total_aud ?? sel.amount_aud ?? sel.amount ?? '';
                         const n = parseFloat(String(amt));
                         setAmountPaid(!isNaN(n) ? String(n.toFixed(2)) : String(amt));
                       }
                     }}
                     className="w-full px-4 py-3.5 bg-gray-50 dark:bg-gray-700 border-0 rounded-xl text-gray-900 dark:text-gray-100 text-sm placeholder-gray-400 focus:ring-2 focus:ring-blue-500 transition-all"
-                    disabled={!completedTopUps || completedTopUps.length === 0}
+                    disabled={!activeTopUps || activeTopUps.length === 0}
                   >
-                    <option value="">{(completedTopUps && completedTopUps.length > 0) ? 'Select completed top-up' : "You don't have any active Top Up"}</option>
-                    {completedTopUps && completedTopUps.length > 0 && completedTopUps.map((item: any) => {
+                    <option value="">{(activeTopUps && activeTopUps.length > 0) ? 'Select active top-up' : "You don't have any active Top Up"}</option>
+                    {activeTopUps && activeTopUps.length > 0 && activeTopUps.map((item: any) => {
                       const txn = item.transaction_id ?? item.id;
-                      const amt = item.amount_aud ?? item.total_aud ?? item.amount ?? '';
+                      const amt = item.total_aud ?? item.amount_aud ?? item.amount ?? '';
                       const n = parseFloat(String(amt));
                       const amtFormatted = !isNaN(n) ? n.toFixed(2) : String(amt);
                       return (
@@ -290,22 +314,15 @@ export default function PaymentConfirmationPage() {
                     placeholder="0.00"
                     step="0.01"
                     min={minAmount}
-                    max={maxAmount || undefined}
                     className={`w-full pl-8 pr-4 py-3.5 bg-gray-50 dark:bg-gray-700 border-0 rounded-xl text-gray-900 dark:text-gray-100 text-sm placeholder-gray-400 focus:ring-2 transition-all ${
-                      topupId && amountPaid && parseFloat(amountPaid) > maxAmount
-                        ? 'focus:ring-red-500 ring-2 ring-red-500'
-                        : topupId && amountPaid && parseFloat(amountPaid) < minAmount
+                      topupId && amountPaid && parseFloat(amountPaid) < minAmount
                         ? 'focus:ring-red-500 ring-2 ring-red-500'
                         : 'focus:ring-blue-500'
                     }`}
                   />
                 </div>
-                {topupId && amountPaid && (parseFloat(amountPaid) > maxAmount || parseFloat(amountPaid) < minAmount) && (
-                  <p className="mt-2 text-sm text-red-500">
-                    {parseFloat(amountPaid) > maxAmount
-                      ? `Amount cannot exceed $${maxAmount.toFixed(2)}`
-                      : `Amount must be at least $${minAmount.toFixed(2)}`}
-                  </p>
+                {topupId && amountPaid && parseFloat(amountPaid) < minAmount && (
+                  <p className="mt-2 text-sm text-red-500">{`Amount must be at least $${minAmount.toFixed(2)}`}</p>
                 )}
                 {topupId && maxAmount > 0 && (
                   <p className="mt-1 text-xs text-gray-500">Allowed range: ${minAmount.toFixed(2)} - ${maxAmount.toFixed(2)} AUD</p>

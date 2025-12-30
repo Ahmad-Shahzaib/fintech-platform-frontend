@@ -40,11 +40,11 @@ export default function UserSidebar() {
       path: "/my-top-up",
     },
     {
-      name: "Re Payments",
+      name: "My Payments",
       path: "/repayments",
       icon: <BsCreditCard size={25} />,
       subItems: [
-        { name: "Make Payment", path: "/create-payment" },
+        { name: "Payment Proofs", path: "/create-payment" },
         { name: "Payment History", path: "/payments-history" },
       ],
     },
