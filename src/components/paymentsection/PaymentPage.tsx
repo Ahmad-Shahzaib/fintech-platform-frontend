@@ -1,5 +1,6 @@
 // pages/payment.js
 "use client";
+import { useRouter } from 'next/navigation';
 
 import { useState, useRef, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
@@ -31,6 +32,7 @@ export default function PaymentConfirmationPage() {
 
   // Global alert from provider (replaces inline messages below)
   const { showAlert } = useAlert();
+  const router = useRouter();
 
   // Show global alerts when submit state changes, then clear submit state after 3s
   useEffect(() => {
@@ -95,7 +97,7 @@ export default function PaymentConfirmationPage() {
     formData.append('payment_notes', paymentNotes);
 
     if (selectedFile) {
-      formData.append('receipt_file', selectedFile);
+      formData.append('receipt_path', selectedFile);
     }
 
     // if a bank was selected, include bank_id in the payload
@@ -122,6 +124,12 @@ export default function PaymentConfirmationPage() {
         setPreviewUrl('');
       }
       if (fileRef.current) fileRef.current.value = '';
+      // Redirect user to My Top-Ups
+      try {
+        router.push('/my-top-up');
+      } catch (e) {
+        // ignore navigation failures
+      }
     } catch (err) {
       // error handled in slice
     }

@@ -150,19 +150,46 @@ const RecentOrders = ({ admin = false }: Props) => {
 
   const getPaymentStatusBadge = (status: string | null | undefined, id?: string) => {
     const s = (status || '').toLowerCase();
-    const styles: Record<string, string> = {
-      awaiting_payment: 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900 dark:text-yellow-200 dark:border-yellow-700',
-      payment_pending: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900 dark:text-blue-200 dark:border-blue-700',
-      payment_verified: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900 dark:text-green-200 dark:border-green-700',
-      payment_failed: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900 dark:text-red-200 dark:border-red-700',
+    const map: Record<string, { label: string; icon: string; classes: string }> = {
+      awaiting_payment: {
+        label: 'Awaiting Payment',
+        icon: '💳',
+        classes: 'bg-[#FEF3C7] text-[#92400E] dark:bg-[#92400E] dark:text-[#FEF3C7]',
+      },
+      payment_pending: {
+        label: 'Payment Pending',
+        icon: '⏳',
+        classes: 'bg-[#FEF9C3] text-[#854D0E] dark:bg-[#854D0E] dark:text-[#FEF9C3]',
+      },
+      payment_verified: {
+        label: 'Payment Verified',
+        icon: '✅',
+        classes: 'bg-[#D1FAE5] text-[#065F46] dark:bg-[#065F46] dark:text-[#D1FAE5]',
+      },
+      payment_failed: {
+        label: 'Payment Failed',
+        icon: '❌',
+        classes: 'bg-[#FEE2E2] text-[#991B1B] dark:bg-[#991B1B] dark:text-[#FEE2E2]',
+      },
     };
+
+    const info = map[s];
+    if (!info) {
+      return (
+        <div className="flex items-center gap-2">
+          <span className="px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200 dark:bg-gray-700 dark:text-gray-200">
+            {formatPaymentStatus(status)}
+          </span>
+        </div>
+      );
+    }
 
     return (
       <div className="flex items-center gap-2">
-        <span className={`px-3 py-1 rounded-full text-xs font-medium border ${styles[s] || 'bg-gray-100 text-gray-800 border-gray-200'}`}>
-          {formatPaymentStatus(status)}
+        <span className={`px-3 py-1 rounded-full text-xs font-medium inline-flex items-center ${info.classes}`}>
+          <span className="mr-2">{info.icon}</span>
+          {info.label}
         </span>
-     
       </div>
     );
   };

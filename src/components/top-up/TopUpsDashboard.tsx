@@ -5,6 +5,31 @@ import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { fetchTopUps } from '@/redux/thunk/topUpsThunks';
 import Link from 'next/link';
 
+const PaymentStatusBadge: React.FC<{ status?: string | null }> = ({ status }) => {
+  if (!status) return <span className="text-xs text-gray-500">-</span>;
+  const s = String(status).toLowerCase();
+  const map: Record<string, { label: string; icon: string; bg: string; color: string }> = {
+    awaiting_payment: { label: 'Awaiting Payment', icon: '💳', bg: '#FEF3C7', color: '#92400E' },
+    payment_pending: { label: 'Payment Pending', icon: '⏳', bg: '#FEF9C3', color: '#854D0E' },
+    payment_verified: { label: 'Payment Verified', icon: '✅', bg: '#D1FAE5', color: '#065F46' },
+    payment_failed: { label: 'Payment Failed', icon: '❌', bg: '#FEE2E2', color: '#991B1B' },
+  };
+
+  const item = map[s] ?? { label: status, icon: '', bg: '#F3F4F6', color: '#111827' };
+
+  return (
+    <span
+      className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium"
+      style={{ backgroundColor: item.bg, color: item.color }}
+    >
+      <span className="mr-2 leading-none" aria-hidden>
+        {item.icon}
+      </span>
+      <span>{item.label}</span>
+    </span>
+  );
+};
+
 type TopUp = {
   id: string;
   internalId?: string | number;
@@ -168,7 +193,7 @@ const TopUpsDashboard = () => {
                         {topUp.network}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
-                        {formatPaymentStatus(topUp.paymentStatus)}
+                        <PaymentStatusBadge status={topUp.paymentStatus} />
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">{getStatusBadge(topUp.status)}</td>
                       <td className="px-6 py-4 whitespace-nowrap">

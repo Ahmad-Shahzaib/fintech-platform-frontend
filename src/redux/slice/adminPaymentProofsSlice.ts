@@ -49,9 +49,19 @@ const adminPaymentProofsSlice = createSlice({
     });
     builder.addCase(fetchAdminProofs.fulfilled, (state, action: PayloadAction<any>) => {
       state.loading = false;
-      // API is expected to return { data: [...], pagination: {...} }
-      state.data = action.payload?.data || [];
-      state.pagination = action.payload?.pagination || null;
+      // Support multiple API shapes:
+      // 1) { data: { current_page, data: [...] , ... } }  <-- nested "data"
+      // 2) { data: [...], pagination: {...} }           <-- flat shape
+      const resp = action.payload;
+      if (resp?.data?.data) {
+        // nested: resp.data is pagination object and resp.data.data is items array
+        state.data = resp.data.data || [];
+        state.pagination = resp.data || null;
+      } else {
+        // flat or unexpected
+        state.data = resp?.data || [];
+        state.pagination = resp?.pagination || null;
+      }
       state.error = null;
     });
     builder.addCase(fetchAdminProofs.rejected, (state, action) => {

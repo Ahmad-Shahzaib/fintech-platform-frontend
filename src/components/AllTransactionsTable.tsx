@@ -6,6 +6,8 @@ import { DayPicker, DateRange } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { fetchTransactions, exportTransactionsToExcel } from '@/redux/thunk/transactionsThunks';
+import { verifyAdminPayment, rejectAdminPayment } from '@/redux/thunk/adminPaymentProofsThunks';
+import { useAlert } from '@/components/common/GlobalAlert';
 import type { Transaction } from '@/redux/thunk/transactionsThunks';
 import { Button } from './ui/button';
 import ExcelJS from 'exceljs';
@@ -28,6 +30,50 @@ const StatusBadge: React.FC<{ status: Transaction['status'] }> = ({ status }) =>
   );
 };
 
+const PaymentStatusBadge: React.FC<{ status?: string }> = ({ status }) => {
+  if (!status) return <span className="text-xs text-gray-500">-</span>;
+  const s = String(status).toLowerCase();
+  const map: Record<string, { label: string; icon: string; classes: string }> = {
+    awaiting_payment: {
+      label: 'Awaiting Payment',
+      icon: '💳',
+      classes: 'bg-[#FEF3C7] text-[#92400E] dark:bg-[#92400E] dark:text-[#FEF3C7]',
+    },
+    payment_pending: {
+      label: 'Payment Pending',
+      icon: '⏳',
+      classes: 'bg-[#FEF9C3] text-[#854D0E] dark:bg-[#854D0E] dark:text-[#FEF9C3]',
+    },
+    payment_verified: {
+      label: 'Payment Verified',
+      icon: '✅',
+      classes: 'bg-[#D1FAE5] text-[#065F46] dark:bg-[#065F46] dark:text-[#D1FAE5]',
+    },
+    payment_failed: {
+      label: 'Payment Failed',
+      icon: '❌',
+      classes: 'bg-[#FEE2E2] text-[#991B1B] dark:bg-[#991B1B] dark:text-[#FEE2E2]',
+    },
+  };
+
+  const info = map[s];
+  if (!info) {
+    const label = s.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    return (
+      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+        {label}
+      </span>
+    );
+  }
+
+  return (
+    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${info.classes}`}>
+      <span className="mr-2">{info.icon}</span>
+      {info.label}
+    </span>
+  );
+};
+
 const AllTransactionsTable: React.FC = () => {
   const dispatch = useAppDispatch();
   const { items: transactions, loading, pagination } = useAppSelector(state => state.transactions);
@@ -41,8 +87,11 @@ const AllTransactionsTable: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [detailItem, setDetailItem] = useState<any | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const datePickerRef = useRef<HTMLDivElement>(null);
+  const { showAlert } = useAlert();
 
   // Handle Excel Export (Client-side)
   const handleExport = async () => {
@@ -165,6 +214,8 @@ const AllTransactionsTable: React.FC = () => {
     userName: txn.user?.name || 'N/A',
     currencyCode: txn.currency?.code || 'N/A',
     networkName: txn.network?.name || 'N/A',
+    // Prefer `payment_status` but fall back to other fields if API uses different names
+    payment_status: (txn as any).payment_status ?? undefined,
     amountAud: parseFloat(txn.amount_aud),
     parsedDate: parseISO(txn.created_at), // For client-side filtering
   }));
@@ -189,10 +240,9 @@ const AllTransactionsTable: React.FC = () => {
   // Close dropdowns on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      // if click happens outside the whole table container, close dropdowns and date picker
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setOpenDropdownId(null);
-      }
-      if (datePickerRef.current && !datePickerRef.current.contains(event.target as Node)) {
         setShowDatePicker(false);
       }
     };
@@ -205,7 +255,7 @@ const AllTransactionsTable: React.FC = () => {
   };
 
   const ActionDropdown = ({ txn }: { txn: any }) => (
-    <div className="relative inline-block text-left" ref={dropdownRef}>
+    <div className="relative inline-block text-left">
       <button
         onClick={(e) => {
           e.stopPropagation();
@@ -221,31 +271,66 @@ const AllTransactionsTable: React.FC = () => {
           <div className="py-1">
             <button
               onClick={() => {
-                alert(`View: ${txn.transactionId}`);
+                console.debug('[AllTransactionsTable] View clicked', txn);
                 setOpenDropdownId(null);
+                setDetailItem(txn);
+                setShowDetailModal(true);
               }}
               className="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
             >
               View
             </button>
-            <button
-              onClick={() => {
-                alert(`Approve: ${txn.transactionId}`);
+            {/* <button
+              onClick={async () => {
+                console.debug('[AllTransactionsTable] Approve clicked', txn);
                 setOpenDropdownId(null);
+                try {
+                  const proofId = Number(txn.id);
+                  const res = await dispatch(verifyAdminPayment({ id: proofId, admin_notes: null })).unwrap();
+                  const msg = res?.message || 'Payment verified';
+                  try { showAlert(msg, 'success'); } catch { alert(msg); }
+                  const params: any = { page: currentPage };
+                  if (statusFilter) params.status = statusFilter;
+                  if (selectedRange.from && selectedRange.to) {
+                    params.from_date = format(selectedRange.from, 'yyyy-MM-dd');
+                    params.to_date = format(selectedRange.to, 'yyyy-MM-dd');
+                  }
+                  dispatch(fetchTransactions(params));
+                } catch (err: any) {
+                  const msg = err?.message || err || 'Failed to verify payment';
+                  try { showAlert(msg, 'error'); } catch { alert(msg); }
+                }
               }}
               className="w-full text-left px-4 py-2.5 text-sm text-green-600 hover:bg-gray-100 dark:hover:bg-gray-700"
             >
               Approve
             </button>
             <button
-              onClick={() => {
-                alert(`Reject: ${txn.transactionId}`);
+              onClick={async () => {
+                console.debug('[AllTransactionsTable] Reject clicked', txn);
                 setOpenDropdownId(null);
+                const reason = window.prompt('Rejection reason (optional)') || 'Rejected by admin';
+                try {
+                  const proofId = Number(txn.id);
+                  const res = await dispatch(rejectAdminPayment({ id: proofId, rejection_reason: reason })).unwrap();
+                  const msg = res?.message || 'Payment rejected';
+                  try { showAlert(msg, 'success'); } catch { alert(msg); }
+                  const params: any = { page: currentPage };
+                  if (statusFilter) params.status = statusFilter;
+                  if (selectedRange.from && selectedRange.to) {
+                    params.from_date = format(selectedRange.from, 'yyyy-MM-dd');
+                    params.to_date = format(selectedRange.to, 'yyyy-MM-dd');
+                  }
+                  dispatch(fetchTransactions(params));
+                } catch (err: any) {
+                  const msg = err?.message || err || 'Failed to reject payment';
+                  try { showAlert(msg, 'error'); } catch { alert(msg); }
+                }
               }}
               className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700"
             >
               Reject
-            </button>
+            </button> */}
           </div>
         </div>
       )}
@@ -253,7 +338,7 @@ const AllTransactionsTable: React.FC = () => {
   );
 
   return (
-    <div className="space-y-6">
+    <div ref={containerRef} className="space-y-6">
       {/* Header + Filters */}
       <div className="bg-white dark:bg-gray-800 shadow-sm rounded-xl border border-gray-200 dark:border-gray-700">
         <div className="px-6 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -349,14 +434,16 @@ const AllTransactionsTable: React.FC = () => {
           <table className="w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-900">
               <tr>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Transaction ID</th>
+                <th className="px-3 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Transaction ID</th>
+                <th className="px-3 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">User Name</th>
+                <th className="px-3 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Currency</th>
+                <th className="px-3 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Network</th>
+                <th className="px-3 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Payment Status</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Date</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">User Name</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Currency</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Network</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Amount (AUD)</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-4 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Actions</th>
+
+                <th className="px-3 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Amount (AUD)</th>
+                <th className="px-3 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Status</th>
+                <th className="px-3 py-4 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -378,18 +465,20 @@ const AllTransactionsTable: React.FC = () => {
               ) : (
                 displayTransactions.map((txn) => (
                   <tr key={txn.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
-                    <td className="px-6 py-4 text-sm font-mono text-gray-900 dark:text-gray-100">{txn.transactionId}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{format(parseISO(txn.date), 'MMM dd, yyyy')}</td>
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">{txn.userName}</td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 py-4 text-sm font-mono text-gray-900 dark:text-gray-100">{txn.transactionId}</td>
+                    <td className="px-3 py-4 text-sm font-medium text-gray-900 dark:text-white">{txn.userName}</td>
+                    <td className="px-3 py-4">
                       <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
                         {txn.currencyCode}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{txn.networkName}</td>
-                    <td className="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-gray-100">${txn.amountAud.toLocaleString('en-AU', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                    <td className="px-6 py-4"><StatusBadge status={txn.status} /></td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-3 py-4 text-sm text-gray-600 dark:text-gray-300">{txn.networkName}</td>
+                    <td className="px-3 py-4"><PaymentStatusBadge status={txn.payment_status} /></td>
+                    <td className="px-3 py-4 text-sm text-gray-600 dark:text-gray-300">{format(parseISO(txn.date), 'MMM dd, yyyy')}</td>
+
+                    <td className="px-3 py-4 text-sm font-semibold text-gray-900 dark:text-gray-100">${txn.amountAud.toLocaleString('en-AU', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td className="px-3 py-4"><StatusBadge status={txn.status} /></td>
+                    <td className="px-3 py-4 text-right">
                       <ActionDropdown txn={txn} />
                     </td>
                   </tr>
@@ -441,6 +530,7 @@ const AllTransactionsTable: React.FC = () => {
                 <div className="flex justify-between items-start mb-4">
                   <div>
                     <p className="text-xs text-gray-500 dark:text-gray-400">Transaction ID</p>
+                  
                     <p className="font-mono text-sm font-medium text-gray-900 dark:text-white">{txn.transactionId}</p>
                   </div>
                   <div className="flex items-center gap-3">
@@ -482,6 +572,32 @@ const AllTransactionsTable: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Detail Modal (single instance) */}
+      {showDetailModal && detailItem && (
+        <div className="fixed inset-0 flex items-center justify-center z-[100000]">
+          <div className="absolute inset-0 bg-black opacity-40" onClick={() => setShowDetailModal(false)} />
+          <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl p-6 z-50 dark:bg-gray-800">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Transaction Details</h3>
+              <button onClick={() => setShowDetailModal(false)} className="text-gray-500 hover:text-gray-700 dark:text-gray-300">Close</button>
+            </div>
+            <div className="grid grid-cols-2 gap-4 text-sm text-gray-700 dark:text-gray-200">
+              <div><div className="text-xs text-gray-500">Transaction ID</div><div className="font-mono">{detailItem.transactionId}</div></div>
+              <div><div className="text-xs text-gray-500">Date</div><div>{format(parseISO(detailItem.date), 'MMM dd, yyyy HH:mm:ss')}</div></div>
+              <div><div className="text-xs text-gray-500">User</div><div className="font-medium">{detailItem.userName}</div></div>
+              <div><div className="text-xs text-gray-500">Amount (AUD)</div><div className="font-semibold">${Number(detailItem.amountAud).toLocaleString('en-AU', {minimumFractionDigits:2, maximumFractionDigits:2})}</div></div>
+              <div><div className="text-xs text-gray-500">Currency</div><div>{detailItem.currencyCode} ({detailItem.networkName})</div></div>
+              <div><div className="text-xs text-gray-500">Payment Status</div><div className="">{detailItem.payment_status || '-'}</div></div>
+              <div className="col-span-2"><div className="text-xs text-gray-500">Status</div><div><StatusBadge status={detailItem.status} /></div></div>
+            </div>
+            <div className="mt-4 flex justify-end">
+              <button onClick={() => setShowDetailModal(false)} className="px-3 py-1 bg-gray-200 text-gray-800 rounded text-sm">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

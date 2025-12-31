@@ -263,6 +263,59 @@ const AdminAllTopUps: React.FC = () => {
         }
     };
 
+        const getPaymentStatusColor = (paymentStatus: string) => {
+            switch ((paymentStatus || '').toLowerCase()) {
+                case 'paid':
+                case 'completed':
+                    return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+                case 'pending':
+                case 'awaiting':
+                    return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+                case 'failed':
+                case 'error':
+                    return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+                case 'processing':
+                    return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+                default:
+                    return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200';
+            }
+        };
+
+        const formatPaymentStatus = (s: string) => {
+            const str = (s || '').toString().replace(/[_-]+/g, ' ').trim().replace(/\s+/g, ' ');
+            if (!str) return 'Unknown';
+            return str.split(' ').map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()).join(' ');
+        };
+
+        const PaymentStatusBadge: React.FC<{ status?: string }> = ({ status }) => {
+            if (!status) return <span className="text-xs text-gray-500">-</span>;
+            const s = String(status).toLowerCase();
+                const map: Record<string, { label: string; icon: string; classes: string }> = {
+                    awaiting_payment: { label: 'Awaiting Payment', icon: '💳', classes: 'bg-[#FEF3C7] text-[#92400E] dark:bg-[#92400E] dark:text-[#FEF3C7]' },
+                    payment_pending: { label: 'Payment Pending', icon: '⏳', classes: 'bg-[#FEF9C3] text-[#854D0E] dark:bg-[#854D0E] dark:text-[#FEF9C3]' },
+                    payment_verified: { label: 'Payment Verified', icon: '✅', classes: 'bg-[#D1FAE5] text-[#065F46] dark:bg-[#065F46] dark:text-[#D1FAE5]' },
+                    payment_failed: { label: 'Payment Failed', icon: '❌', classes: 'bg-[#FEE2E2] text-[#991B1B] dark:bg-[#991B1B] dark:text-[#FEE2E2]' },
+                };
+                const info = map[s];
+                if (!info) {
+                    const label = formatPaymentStatus(s);
+                    return <span className="text-xs text-gray-500">{label}</span>;
+                }
+                return (
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${info.classes}`}>
+                        <span className="mr-2">{info.icon}</span>
+                        {info.label}
+                    </span>
+                );
+        };
+
+    const formatTransactionId = (id: unknown) => {
+        const s = (id ?? '').toString();
+        if (!s) return '';
+        if (s.length <= 5) return s;
+        return `${s.slice(0,2)}...${s.slice(-3)}`;
+    };
+
     if (loading) {
         return (
             <div className="flex justify-center items-center h-64">
@@ -342,28 +395,31 @@ const AdminAllTopUps: React.FC = () => {
                                     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                                         <thead className="bg-gray-50 dark:bg-gray-700">
                                             <tr>
-                                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                    <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                                     Transaction ID
                                                 </th>
-                                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                    <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                                     User
                                                 </th>
-                                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                    <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                                     Amount (AUD)
                                                 </th>
-                                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                    <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                                     Currency
                                                 </th>
-                                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                    <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                                     Network
                                                 </th>
-                                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                                    Status
+                                                    <th scope="col" className="px-3  py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                    Payment Status
                                                 </th>
-                                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                    <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                    Request Status
+                                                </th>
+                                                    <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                                     Date
                                                 </th>
-                                                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                    <th scope="col" className="px-3  py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                                     Actions
                                                 </th>
                                             </tr>
@@ -371,6 +427,12 @@ const AdminAllTopUps: React.FC = () => {
                                             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                                             {data.data.data.map((topUp) => {
                                                 const status = topUp.status;
+                                                // Prefer `top_up_request.payment_status` (snake_case) or `topUpRequest.payment_status` (camelCase).
+                                                // Do NOT fall back to repayment status — show 'unknown' if payment status missing.
+                                                const paymentStatus = (topUp as any).top_up_request?.payment_status
+                                                    ?? (topUp as any).topUpRequest?.payment_status
+                                                    ?? (topUp as any).payment_status
+                                                    ?? 'unknown';
                                                 const isPending = status === 'pending';
                                                 const isApproved = status === 'approved';
                                                 const isProcessing = status === 'processing';
@@ -384,7 +446,7 @@ const AdminAllTopUps: React.FC = () => {
                                                 return (
                                                     <tr key={topUp.id}>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-200">
-                                                        {topUp.transaction_id}
+                                                        {formatTransactionId(topUp.transaction_id)}
                                                     </td>
                                                         <td className="px-6 py-4 whitespace-nowrap">
                                                             <div className="text-sm text-gray-900 dark:text-gray-200">{topUp.user.name}</div>
@@ -398,10 +460,13 @@ const AdminAllTopUps: React.FC = () => {
                                                                 {topUp.currency.code}
                                                             </span>
                                                     </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                                                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
                                                             {topUp.network.name}
                                                     </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                        <td className="px-3 py-4 whitespace-nowrap">
+                                                            <PaymentStatusBadge status={paymentStatus} />
+                                                    </td>
+                                                        <td className="px-3 py-4 whitespace-nowrap">
                                                             <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(topUp.status)}`}>
                                                                 {topUp.status.charAt(0).toUpperCase() + topUp.status.slice(1)}
                                                             </span>

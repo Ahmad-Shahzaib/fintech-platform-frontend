@@ -69,6 +69,23 @@ interface TopUpItem {
         updated_at: string;
         deleted_at: string | null;
     };
+    // Some API responses include a nested `top_up_request` object (when the list is payments)
+    top_up_request?: {
+        id: number;
+        transaction_id: string;
+        user_id: number;
+        currency_id: number;
+        network_id: number;
+        amount_aud: string;
+        wallet_address: string;
+        wallet_address_confirmation: string;
+        payment_status?: string;
+        created_at: string;
+        updated_at: string;
+        // nested currency/network minimal shapes used by components
+        currency?: { id: number; code: string; name: string };
+        network?: { id: number; name: string; explorer_url?: string };
+    };
     currency: {
         id: number;
         code: string;

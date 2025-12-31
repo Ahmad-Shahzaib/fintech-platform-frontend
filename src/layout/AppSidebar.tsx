@@ -98,7 +98,7 @@ const navItems: NavItem[] = [
       [
         { name: "ALL TRANSACTIONS", path: "/all-transactions", pro: false },
         { name: "KYC REVIEW QUEUE", path: "/kyc-review-queue", pro: false },
-        { name: "ALL REPAYMENTS", path: "/all-repayments", pro: false },
+        { name: "PAYMENT VERIFICATION ", path: "/all-repayments", pro: false },
         { name: "FINANCIAL SUMMARY", path: "/financial-summary-report", pro: false },
         { name: " ALL USERS", path: "/user-activity-report", pro: false },
       ]

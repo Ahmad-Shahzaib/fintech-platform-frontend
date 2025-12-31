@@ -5,6 +5,7 @@ import { ArrowUpIcon, ArrowDownIcon } from "@/icons"; // Assuming you have these
 import { useAuth } from "@/context/AuthContext";
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { fetchAdminStats } from '@/redux/slice/adminStatsSlice';
+import { fetchPayments } from '@/redux/thunk/paymentsListThunks';
 import { fetchUserTopUps } from '@/redux/thunk/userTopUpsThunks';
 import { fetchRepayments } from '@/redux/thunk/repaymentsThunks';
 import { fetchOutstandingBalance } from '@/redux/thunk/outstandingBalanceThunks';
@@ -76,13 +77,13 @@ const getIcon = (name: string) => {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
         </svg>
       );
-    case "KYC Pending Approvals":
+       case "KYC Pending Approvals":
       return (
         <svg className="w-8 h-8 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
         </svg>
       );
-       case "Pending Payments":
+      case "Pending Payments":
       return (
         <svg
   className="w-8 h-8 text-green-500"
@@ -99,6 +100,14 @@ const getIcon = (name: string) => {
   />
 </svg>
 
+      );
+    case "Pending Payment Verifications":
+      return (
+        <svg className="w-8 h-8 text-white" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          <rect x="3" y="4" width="14" height="16" rx="2" stroke="currentColor" strokeWidth="1.5" />
+          <path d="M7 8h6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+        </svg>
       );
     default:
       return (
@@ -135,6 +144,7 @@ export const EcommerceMetrics = ({ kycStatus, isAdmin }: { kycStatus?: string | 
   // fetch admin stats when admin view
   const dispatch = useAppDispatch();
   const adminStats = useAppSelector((s) => s.adminStats);
+  const paymentsList = useAppSelector((s) => s.paymentsList);
   const userTopUps = useAppSelector((s) => s.userTopUps);
   const repayments = useAppSelector((s) => s.repayments);
   const outstandingBalance = useAppSelector((s) => s.outstandingBalance);
@@ -156,6 +166,8 @@ export const EcommerceMetrics = ({ kycStatus, isAdmin }: { kycStatus?: string | 
   useEffect(() => {
     if (resolvedIsAdmin) {
       dispatch(fetchAdminStats());
+      // load a minimal payments list filtered to pending verification so we can show the total
+      dispatch(fetchPayments({ page: 1, per_page: 1, verification_status: 'pending' }));
     } else {
       // Fetch user top-ups and repayments for non-admin users
       dispatch(fetchUserTopUps({}));
@@ -193,53 +205,62 @@ export const EcommerceMetrics = ({ kycStatus, isAdmin }: { kycStatus?: string | 
     { name: "Total Currencies", price: String(adminStats?.data?.total_currencies ?? 0), change: null },
     { name: "Total Networks", price: String(adminStats?.data?.total_networks ?? 0), change: null },
     { name: "Total Top Ups Request", price: String(adminStats?.data?.total_topups ?? 0), change: null },
-    { name: "KYC Pending Approvals", price: String(adminStats?.data?.kyc?.pending ?? 0), change: null },
+    { name: "KYC Pending Approvals", price: String(adminStats?.data?.kyc?.pending ?? 0), change: null, subtitle: 'KYC requests awaiting review' },
+    { name: "Pending Payment Verifications", price: String(paymentsList?.pagination?.total ?? paymentsList?.items?.length ?? 0), change: null, subtitle: 'Payment proofs awaiting verification' },
   ];
 
   const cryptos = resolvedIsAdmin ? adminCards : userCards;
 
 
-  return (
-    <div className={resolvedIsAdmin ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6" : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6"}>
-      {cryptos.map((crypto) => (
-        <div
-          key={crypto.name}
-          className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6 transition-all hover:shadow-md"
-        >
-          {/* Icon + Name */}
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-50 dark:bg-gray-800 flex items-center justify-center">
-              {getIcon(crypto.name)}
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900 dark:text-white">
-                {crypto.name}
-              </h3>
-            </div>
-          </div>
+  const getCardAccent = (name: string) => {
+    switch (name) {
+      case 'Total User': return 'from-blue-500 to-indigo-500';
+      case 'Total Currencies': return 'from-green-400 to-emerald-500';
+      case 'Total Networks': return 'from-purple-400 to-indigo-500';
+      case 'Total Top Ups Request': return 'from-pink-400 to-pink-600';
+      case 'KYC Pending Approvals': return 'from-yellow-400 to-yellow-600';
+      case 'Pending Payment Verifications': return 'from-amber-500 to-yellow-600';
+      default: return 'from-gray-400 to-gray-600';
+    }
+  };
 
-          {/* Price + Change / Status */}
-          <div className="flex items-end justify-between mt-6">
-            <div>
-              <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
-                {crypto.price}
-              </h4>
+  return (
+    <div className={resolvedIsAdmin ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 sm:gap-6" : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6"}>
+      {cryptos.map((crypto) => {
+        const accent = getCardAccent(crypto.name);
+        const CardInner = (
+          <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6 transition-transform transform hover:-translate-y-1 hover:shadow-xl cursor-pointer">
+            <div className="flex items-center gap-3">
+              <div className={`w-12 h-12 rounded-lg flex items-center justify-center bg-gradient-to-br ${accent}`}>
+                {getIcon(crypto.name)}
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900 dark:text-white text-sm">{crypto.name}</h3>
+              </div>
             </div>
-            <div>
-              {crypto.name === 'KYC Status' ? (
-                // render status pill based on prop
-                kycPill()
-              ) : (
-                // only show change badge when a numeric change is provided
-                crypto.change != null ? <ChangeBadge value={crypto.change} /> : null
-              )}
-              {
-                // For admin cards we keep values simple (rendered as price above). No extra badge is shown when change is null.
-              }
+
+            <div className="mt-5 flex items-end justify-between">
+              <div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">{crypto.price}</div>
+              </div>
+              <div>
+                {crypto.name === 'KYC Status' ? kycPill() : (crypto.change != null ? <ChangeBadge value={crypto.change} /> : null)}
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        );
+
+        // make Pending Payment Verifications card navigate to payment verification page
+        if (resolvedIsAdmin && crypto.name === 'Pending Payment Verifications') {
+          return (
+            <a key={crypto.name} href="/all-repayments" className="block">{CardInner}</a>
+          );
+        }
+
+        return (
+          <div key={crypto.name}>{CardInner}</div>
+        );
+      })}
     </div>
   );
 };

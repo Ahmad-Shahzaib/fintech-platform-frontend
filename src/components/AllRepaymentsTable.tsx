@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, formatDistanceToNow } from 'date-fns';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { fetchPayments, exportPaymentsToExcel } from '@/redux/thunk/paymentsListThunks';
 import type { Payment } from '@/redux/thunk/paymentsListThunks';
@@ -162,6 +162,21 @@ const AllRepaymentsTable: React.FC = () => {
       transactionId: payment.top_up_request?.transaction_id || 'N/A',
       amountDue: parseFloat(payment.amount_paid_aud),
       status: payment.verification_status,
+      // New fields
+      paymentMethod: (() => {
+        if (typeof payment.payment_method === 'string') return payment.payment_method;
+        if (payment.payment_method && typeof payment.payment_method === 'object' && 'name' in payment.payment_method) {
+          // payment_method is an object with a name property
+          return (payment.payment_method as any).name;
+        }
+        if (typeof payment.payment_method === 'number') {
+          // fallback to showing the numeric id as string
+          return String(payment.payment_method);
+        }
+        return 'N/A';
+      })(),
+      submittedAt: payment.payment_date || payment.created_at || payment.top_up_request?.created_at || null,
+      verifiedAt: payment.verified_at || payment.updated_at || null,
       dueDate: payment.top_up_request?.repayment_due_date || payment.payment_date,
     }))
     .filter((rep) => {
@@ -234,8 +249,7 @@ const AllRepaymentsTable: React.FC = () => {
               All Repayments
             </h1>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Manage and track user loan repayments
-            </p>
+              Payment Verification - Review and verify user payment proofs </p>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4">
@@ -280,7 +294,9 @@ const AllRepaymentsTable: React.FC = () => {
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">User Name</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Transaction ID</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Amount Paid</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Due Date</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Method</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Submitted</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Verified</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Status</th>
                 <th className="px-6 py-4 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Actions</th>
               </tr>
@@ -310,9 +326,9 @@ const AllRepaymentsTable: React.FC = () => {
                     <td className="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-gray-100">
                       ${rep.amountDue.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
-                      {format(parseISO(rep.dueDate), 'MMM dd, yyyy')}
-                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{rep.paymentMethod}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{rep.submittedAt ? formatDistanceToNow(parseISO(String(rep.submittedAt)), { addSuffix: true }) : '-'}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{rep.verifiedAt ? formatDistanceToNow(parseISO(String(rep.verifiedAt)), { addSuffix: true }) : '-'}</td>
                     <td className="px-6 py-4"><StatusBadge status={rep.status} /></td>
                     <td className="px-6 py-4 text-right">
                       <ActionDropdown rep={rep} />
