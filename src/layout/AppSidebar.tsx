@@ -68,7 +68,7 @@ const navItems: NavItem[] = [
     ],
   },
   {
-    name: "Manage Repayments  ",
+    name: "Manage Payments Proofs  ",
     icon: <CalenderIcon />,
     path : "/repayment-requests",
 
