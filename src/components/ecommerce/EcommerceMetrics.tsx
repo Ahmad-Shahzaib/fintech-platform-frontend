@@ -121,7 +121,7 @@ const getIcon = (name: string) => {
 export const EcommerceMetrics = ({ kycStatus, isAdmin }: { kycStatus?: string | null; isAdmin?: boolean }) => {
   const kycDisplay = kycStatus ? (kycStatus.charAt(0).toUpperCase() + kycStatus.slice(1)) : 'Not Submitted';
 
-  const kycStatusNormalized = kycStatus ? kycStatus.toLowerCase() : 'not_submitted';
+  const kycStatusNormalized = kycStatus ? kycStatus.toLowerCase() : 'Not Submitted';
 
   const kycPill = () => {
     const base = 'inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold';
