@@ -52,6 +52,8 @@ const AdminMessagesPage = () => {
   const [statusUpdateSuccess, setStatusUpdateSuccess] = useState('');
   const [statusUpdateError, setStatusUpdateError] = useState('');
 
+  const isTicketClosed = ["close", "closed"].includes((currentTicket?.status || "").toLowerCase());
+
   const messageSource = reduxMessages.length > 0 ? reduxMessages : (currentTicket?.messages || []);
 
   // All messages = real + optimistic
@@ -427,7 +429,7 @@ const AdminMessagesPage = () => {
                 onChange={(e) => setNewMessage(e.target.value)}
                 placeholder="Type your message..."
                 className="flex-1 px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                disabled={sendLoading}
+                disabled={sendLoading || isTicketClosed}
               />
 
               <input
@@ -447,7 +449,7 @@ const AdminMessagesPage = () => {
 
               <button
                 type="submit"
-                disabled={sendLoading || (!newMessage.trim() && selectedFiles.length === 0)}
+                disabled={sendLoading || isTicketClosed || (!newMessage.trim() && selectedFiles.length === 0)}
                 className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-75 disabled:cursor-not-allowed transition-colors"
               >
                 {sendLoading ? (
